@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖨️ Just-Printing-Server</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Light Gruvbox 配色方案 -->
+    <style>
+        :root {
+            /* Gruvbox Light 背景层次 */
+            --bg0: #fbf1c7;           /* 最淡背景 - 奶油色 */
+            --bg1: #f2e5bc;           /* 次淡背景 */
+            --bg2: #ebdbb2;           /* 卡片/区块背景 */
+            --bg3: #d5c4a1;           /* 深色背景 */
+
+            /* Gruvbox Light 前景/文字 */
+            --fg0: #282828;           /* 主要文字 - 深灰 */
+            --fg1: #3c3836;           /* 次要文字 */
+            --fg2: #504945;           /* 弱化文字 */
+            --fg3: #665c54;           /* 最淡文字 */
+
+            /* Gruvbox 强调色 */
+            --accent-red: #9d0006;    /* 柔和红 - 用于错误/重要操作 */
+            --accent-green: #79740e;  /* 橄榄绿 - 用于成功状态 */
+            --accent-yellow: #b57614; /* 柔和橙 - 用于警告 */
+            --accent-blue: #076678;   /* 深青蓝 - 主强调色 */
+            --accent-purple: #8f3f71; /* 紫红 - 次强调色 */
+            --accent-aqua: #427b58;   /* 青绿 - 信息提示 */
+            --accent-orange: #af3a03; /* 橙色 - 高亮 */
+
+            /* 语义化映射 */
+            --bg-base: #fbf1c7;       /* 页面背景 */
+            --bg-elevated: #f2e5bc;   /* 卡片背景 */
+            --bg-muted: #ebdbb2;      /* 次要区块 */
+            --text-primary: #282828;  /* 主文字 */
+            --text-secondary: #504945;/* 次文字 */
+            --text-muted: #665c54;    /* 弱文字 */
+            --accent: #076678;        /* 主强调色 - 深青蓝 */
+            --accent-hover: #055a68;  /* 悬停状态 */
+            --success: #79740e;       /* 成功色 - 橄榄绿 */
+            --error: #9d0006;         /* 错误色 - 柔和红 */
+            --warning: #b57614;       /* 警告色 - 柔和橙 */
+            --border: #d5c4a1;        /* 边框色 */
+        }
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- 认证遮罩（初始显示） -->
+    <div id="auth-overlay" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(40, 40, 40, 0.5);">
+        <div class="p-8 max-w-md w-full" style="background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(40, 40, 40, 0.1);">
+            <h2 class="text-2xl font-bold mb-6 text-center" style="color: var(--fg0);">输入访问码</h2>
+            <input type="password" id="pin-input"
+                   class="w-full p-3 mb-4 text-center text-xl"
+                   style="background: var(--bg-base); border: 2px solid var(--border); border-radius: 10px; color: var(--fg0);"
+                   placeholder="🔒 请输入PIN码" autofocus>
+            <button id="login-btn"
+                    class="w-full font-bold py-3 transition"
+                    style="background: var(--accent); color: #fbf1c7; border-radius: 10px; box-shadow: 0 2px 6px rgba(7, 102, 120, 0.2);"
+                    onmouseover="this.style.background='var(--accent-hover)'"
+                    onmouseout="this.style.background='var(--accent)'">
+                ➡️ 登录
+            </button>
+            <div id="auth-error" class="mt-4 text-center hidden" style="color: var(--error);"></div>
+        </div>
+    </div>
+
+    <!-- 主界面（初始隐藏） -->
+    <div id="main-app" class="hidden">
+        <!-- 标题栏 -->
+        <header class="p-4 flex justify-between items-center" style="background: var(--bg-elevated); border-bottom: 1px solid var(--border);">
+            <h1 class="text-xl font-bold" style="color: var(--fg0);">🖨️ Just-Printing-Server</h1>
+            <button id="logout-btn" class="transition" style="color: var(--accent);" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">🚪 退出</button>
+        </header>
+
+        <!-- 响应式布局容器 -->
+        <div class="container mx-auto p-4 md:flex md:space-x-6">
+            <!-- 左侧内容区域（上传、文件列表、设置） -->
+            <div class="md:w-1/2">
+                <!-- 上传区域 -->
+                <div class="mb-6">
+                    <div id="upload-area"
+                         class="p-8 text-center cursor-pointer transition"
+                         style="border: 2px dashed var(--border); border-radius: 16px; background: var(--bg-elevated);"
+                         onmouseover="this.style.borderColor='var(--accent)';this.style.background='#fff'"
+                         onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-elevated)'">
+                        <div class="text-4xl mb-2">📤</div>
+                        <p class="text-lg" style="color: var(--fg0);">点击选择文件或拖拽至此</p>
+                        <p class="text-sm mt-2" style="color: var(--text-muted);">支持 📷 图片（JPG/PNG）和 📄 PDF文件</p>
+                        <input type="file" id="file-input" class="hidden" multiple>
+                    </div>
+                </div>
+
+                <!-- 文件列表 -->
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold mb-3" style="color: var(--fg0);">已上传文件</h2>
+                    <div id="file-list" class="space-y-2">
+                        <!-- 文件项将通过JS动态添加 -->
+                    </div>
+                </div>
+
+                <!-- 打印机状态 -->
+                <div class="mb-6 p-4" style="background: var(--bg-elevated); border-radius: 12px; border: 1px solid var(--border);">
+                    <h2 class="text-lg font-bold mb-2" style="color: var(--fg0);">打印机状态</h2>
+                    <div id="printer-status" class="flex items-center">
+                        <span class="w-3 h-3 rounded-full mr-2" style="background: var(--warning);"></span>
+                        <span style="color: var(--fg1);">🟡 检测中</span>
+                    </div>
+                </div>
+
+                <!-- 打印设置 -->
+                <div class="mb-6">
+                    <h2 class="text-lg font-bold mb-3" style="color: var(--fg0);">打印设置</h2>
+
+                    <!-- 份数设置 -->
+                    <div class="mb-4">
+                        <label class="block mb-2" style="color: var(--fg1);">📋 份数</label>
+                        <div class="flex items-center space-x-2">
+                            <button id="copies-decrement" class="w-10 h-10 transition" style="background: var(--bg2); border-radius: 10px; color: var(--fg0);"
+                                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg2)'">-</button>
+                            <input id="copies-input" type="text" value="1"
+                                   class="text-center w-16 py-2" style="background: #fff; border: 1px solid var(--border); border-radius: 10px; color: var(--fg0);" readonly>
+                            <button id="copies-increment" class="w-10 h-10 transition" style="background: var(--bg2); border-radius: 10px; color: var(--fg0);"
+                                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg2)'">+</button>
+                        </div>
+                    </div>
+
+                    <!-- 单双面设置 -->
+                    <div class="mb-4">
+                        <label class="block mb-2" style="color: var(--fg1);">单双面</label>
+                        <div class="flex space-x-2">
+                            <button id="sides-one" class="px-4 py-2 flex-1 transition" style="background: var(--accent); color: #fbf1c7; border-radius: 10px;">📄 单面</button>
+                            <button id="sides-two" class="px-4 py-2 flex-1 transition" style="background: var(--bg2); color: var(--fg0); border-radius: 10px;">📄📄 双面</button>
+                        </div>
+                    </div>
+
+                    <!-- 色彩模式 -->
+                    <div class="mb-6">
+                        <label class="block mb-2" style="color: var(--fg1);">色彩模式</label>
+                        <div class="flex space-x-2">
+                            <button id="color-bw" class="px-4 py-2 flex-1 transition" style="background: var(--accent); color: #fbf1c7; border-radius: 10px;">⚫ 黑白</button>
+                            <button id="color-color" class="px-4 py-2 flex-1 transition" style="background: var(--bg2); color: var(--fg0); border-radius: 10px;">🌈 彩色</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧预览区域 -->
+            <div class="md:w-1/2">
+                <div class="p-4 h-full" style="background: var(--bg-elevated); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(40, 40, 40, 0.06);">
+                    <h2 class="text-lg font-bold mb-3" style="color: var(--fg0);">PDF预览</h2>
+                    <div id="preview-desktop" class="hidden">
+                        <!-- 桌面端PDF嵌入 -->
+                        <embed id="pdf-embed" type="application/pdf" width="100%" height="600px">
+                    </div>
+                    <div id="preview-mobile" class="hidden">
+                        <!-- 移动端预览按钮 -->
+                        <div class="text-center p-8">
+                            <div class="text-4xl mb-4">📄</div>
+                            <p id="preview-info" class="mb-4" style="color: var(--fg1);">PDF已生成（共 0 页）</p>
+                            <button id="preview-fullscreen" class="px-6 py-3 font-bold transition" style="background: var(--accent); color: #fbf1c7; border-radius: 10px;">
+                                点击全屏预览
+                            </button>
+                        </div>
+                    </div>
+                    <div id="preview-empty" class="text-center p-8" style="color: var(--text-muted);">
+                        📄 上传文件后预览将在此显示
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部操作栏（移动端固定） -->
+        <div id="mobile-action-bar" class="fixed bottom-0 left-0 right-0 p-4 flex justify-between md:hidden" style="background: var(--bg-elevated); border-top: 1px solid var(--border);">
+            <button id="cancel-btn" class="px-6 py-3 transition" style="background: var(--bg2); border-radius: 10px; color: var(--fg0);">❌ 取消</button>
+            <button id="print-btn" class="px-6 py-3 font-bold transition" style="background: var(--accent); color: #fbf1c7; border-radius: 10px;">🖨️ 打印</button>
+        </div>
+
+        <!-- 桌面端操作栏 -->
+        <div class="mt-6 p-4 hidden md:block">
+            <div class="flex justify-center space-x-4">
+                <button id="cancel-btn-desktop" class="px-8 py-3 transition" style="background: var(--bg2); border-radius: 10px; color: var(--fg0);">❌ 取消</button>
+                <button id="print-btn-desktop" class="px-8 py-3 font-bold transition" style="background: var(--accent); color: #fbf1c7; border-radius: 10px;">🖨️ 打印</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast通知容器 -->
+    <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+
+    <!-- 加载遮罩 -->
+    <div id="loading-overlay" class="fixed inset-0 z-40 hidden items-center justify-center" style="background: rgba(40, 40, 40, 0.4);">
+        <div class="p-6" style="background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(40, 40, 40, 0.1);">
+            <div class="animate-spin rounded-full h-12 w-12 mx-auto mb-4" style="border: 3px solid var(--border); border-top-color: var(--accent);"></div>
+            <p id="loading-text" style="color: var(--fg0);">处理中...</p>
+        </div>
+    </div>
+
+    <!-- JavaScript将在这里内联 -->
+    <script>
+        // 全局状态
+        const state = {
+            authToken: localStorage.getItem('auth_token'),
+            uploadedFiles: [],
+            printSettings: {
+                copies: 1,
+                sides: 'one-sided',
+                color_mode: 'monochrome'
+            },
+            printerStatus: 'unknown',
+            printerStatusInterval: null,
+            isMobile: window.innerWidth < 768
+        };
+
+        // ==================== 工具函数 ====================
+
+        // Toast通知系统
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const borderColors = {
+                success: 'var(--success)',
+                error: 'var(--error)',
+                info: 'var(--accent)'
+            };
+            toast.className = 'p-4 shadow-lg flex justify-between items-center';
+            toast.style.cssText = `background: #fff; border-left: 4px solid ${borderColors[type]}; border-radius: 8px; color: var(--fg0);`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button class="ml-4" style="color: var(--text-muted);">✕</button>
+            `;
+            container.appendChild(toast);
+
+            // 自动消失
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.3s';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 3000);
+
+            // 手动关闭
+            toast.querySelector('button').addEventListener('click', () => {
+                toast.remove();
+            });
+        }
+
+        // 加载遮罩控制
+        function showLoading(text = '处理中...') {
+            const overlay = document.getElementById('loading-overlay');
+            const textEl = document.getElementById('loading-text');
+            textEl.textContent = text;
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loading-overlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
+
+        // API请求封装
+        async function apiRequest(endpoint, options = {}) {
+            const { method = 'GET', body = null, headers = {}, withAuth = true, timeout = 60000 } = options;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+            const requestHeaders = { ...headers };
+            if (withAuth && state.authToken) {
+                requestHeaders['Authorization'] = `Bearer ${state.authToken}`;
+            }
+
+            if (body && !(body instanceof FormData) && !(body instanceof Blob)) {
+                requestHeaders['Content-Type'] = 'application/json';
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method,
+                    headers: requestHeaders,
+                    body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // 处理HTTP错误状态
+                if (!response.ok) {
+                    let errorMsg = `HTTP ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {
+                        // 忽略JSON解析错误
+                    }
+                    throw new Error(errorMsg);
+                }
+
+                // 尝试解析JSON，对于非JSON响应返回原始响应
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return await response.json();
+                } else {
+                    return await response.blob();
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    throw new Error('请求超时');
+                }
+                throw error;
+            }
+        }
+
+        // 文件大小格式化
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 设备检测和响应式布局切换
+        function checkDeviceWidth() {
+            const isMobileNow = window.innerWidth < 768;
+            if (isMobileNow !== state.isMobile) {
+                state.isMobile = isMobileNow;
+                updatePreviewVisibility();
+            }
+        }
+
+        // ==================== 认证模块 ====================
+
+        function initAuth() {
+            const pinInput = document.getElementById('pin-input');
+            const loginBtn = document.getElementById('login-btn');
+            const authOverlay = document.getElementById('auth-overlay');
+            const mainApp = document.getElementById('main-app');
+            const authError = document.getElementById('auth-error');
+
+            // 设置输入框属性
+            pinInput.setAttribute('inputmode', 'numeric');
+
+            // 检查现有token
+            if (state.authToken) {
+                // 验证token有效性（通过简单的状态查询）
+                verifyTokenAndShowMain();
+            } else {
+                authOverlay.classList.remove('hidden');
+                mainApp.classList.add('hidden');
+            }
+
+            // 回车登录
+            pinInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performLogin();
+                }
+            });
+
+            // 点击登录
+            loginBtn.addEventListener('click', performLogin);
+
+            async function performLogin() {
+                const token = pinInput.value.trim();
+                if (!token) {
+                    showAuthError('请输入访问码');
+                    return;
+                }
+
+                showLoading('登录中...');
+                try {
+                    const response = await apiRequest('/auth', {
+                        method: 'POST',
+                        body: { token },
+                        withAuth: false
+                    });
+
+                    // 登录成功
+                    state.authToken = token;
+                    localStorage.setItem('auth_token', token);
+                    hideLoading();
+                    authOverlay.classList.add('hidden');
+                    mainApp.classList.remove('hidden');
+                    showToast('登录成功', 'success');
+
+                    // 开始轮询打印机状态
+                    startPrinterStatusPolling();
+                    // 初始化打印设置
+                    initPrintSettings();
+
+                } catch (error) {
+                    hideLoading();
+                    showAuthError('访问码无效');
+                    console.error('登录失败:', error);
+                }
+            }
+
+            function showAuthError(message) {
+                authError.textContent = message;
+                authError.classList.remove('hidden');
+            }
+
+            async function verifyTokenAndShowMain() {
+                try {
+                    // 尝试获取打印机状态来验证token
+                    await apiRequest('/printer/status');
+                    // token有效
+                    authOverlay.classList.add('hidden');
+                    mainApp.classList.remove('hidden');
+                    startPrinterStatusPolling();
+                    initPrintSettings();
+                } catch (error) {
+                    // token无效，清除并显示认证界面
+                    localStorage.removeItem('auth_token');
+                    state.authToken = null;
+                    authOverlay.classList.remove('hidden');
+                    mainApp.classList.add('hidden');
+                }
+            }
+        }
+
+        // ==================== 文件上传模块 ====================
+
+        function initFileUpload() {
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+            const fileList = document.getElementById('file-list');
+
+            // 点击上传区域
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // 拖拽支持
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--accent)';
+                uploadArea.style.background = '#fff';
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = 'var(--border)';
+                uploadArea.style.background = 'var(--bg-elevated)';
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--border)';
+                uploadArea.style.background = 'var(--bg-elevated)';
+                const files = Array.from(e.dataTransfer.files);
+                handleFiles(files);
+            });
+
+            // 文件选择变化
+            fileInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                handleFiles(files);
+                // 清空input以便选择相同文件
+                e.target.value = '';
+            });
+
+            async function handleFiles(files) {
+                // 过滤支持的文件类型
+                const supportedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'image/jpg'];
+                const validFiles = files.filter(file =>
+                    supportedTypes.includes(file.type.toLowerCase()) ||
+                    file.name.toLowerCase().endsWith('.jpg') ||
+                    file.name.toLowerCase().endsWith('.jpeg') ||
+                    file.name.toLowerCase().endsWith('.png') ||
+                    file.name.toLowerCase().endsWith('.pdf')
+                );
+
+                if (validFiles.length === 0) {
+                    showToast('仅支持JPG、PNG、PDF文件', 'error');
+                    return;
+                }
+
+                // 顺序上传每个文件
+                for (const file of validFiles) {
+                    await uploadFile(file);
+                }
+            }
+
+            async function uploadFile(file) {
+                // 添加文件到列表（上传中状态）
+                const fileId = Date.now() + Math.random();
+                const fileItem = {
+                    id: fileId,
+                    name: file.name,
+                    size: file.size,
+                    status: 'uploading',
+                    progress: 0
+                };
+                state.uploadedFiles.push(fileItem);
+                updateFileList();
+
+                // 创建FormData
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // 使用XHR以支持进度显示
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const progress = Math.round((e.loaded / e.total) * 100);
+                            fileItem.progress = progress;
+                            updateFileItem(fileId);
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status === 200) {
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                fileItem.status = 'success';
+                                fileItem.pages = response.pages;
+                                fileItem.size = response.size;
+                                updateFileItem(fileId);
+                                showToast(`${file.name} 上传成功`, 'success');
+
+                                // 刷新预览
+                                updatePreview();
+                                resolve(response);
+                            } catch (error) {
+                                fileItem.status = 'error';
+                                updateFileItem(fileId);
+                                showToast(`${file.name} 上传失败: 响应解析错误`, 'error');
+                                reject(error);
+                            }
+                        } else {
+                            fileItem.status = 'error';
+                            updateFileItem(fileId);
+                            let errorMsg = `HTTP ${xhr.status}`;
+                            try {
+                                const errorData = JSON.parse(xhr.responseText);
+                                errorMsg = errorData.error || errorMsg;
+                            } catch (e) {}
+                            showToast(`${file.name} 上传失败: ${errorMsg}`, 'error');
+                            reject(new Error(errorMsg));
+                        }
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        fileItem.status = 'error';
+                        updateFileItem(fileId);
+                        showToast(`${file.name} 上传失败: 网络错误`, 'error');
+                        reject(new Error('Network error'));
+                    });
+
+                    xhr.addEventListener('abort', () => {
+                        fileItem.status = 'error';
+                        updateFileItem(fileId);
+                        showToast(`${file.name} 上传已取消`, 'error');
+                        reject(new Error('Upload aborted'));
+                    });
+
+                    xhr.open('POST', '/upload');
+                    xhr.setRequestHeader('Authorization', `Bearer ${state.authToken}`);
+                    xhr.send(formData);
+                });
+            }
+
+            function updateFileItem(fileId) {
+                const items = document.querySelectorAll('#file-list .file-item');
+                items.forEach(item => {
+                    if (item.dataset.fileId === fileId.toString()) {
+                        const fileItem = state.uploadedFiles.find(f => f.id === fileId);
+                        if (fileItem) {
+                            item.innerHTML = createFileItemHTML(fileItem);
+                        }
+                    }
+                });
+            }
+        }
+
+        // ==================== 文件列表渲染 ====================
+
+        function updateFileList() {
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+
+            state.uploadedFiles.forEach(fileItem => {
+                const div = document.createElement('div');
+                div.className = 'file-item p-3 flex items-center justify-between';
+                div.style.cssText = 'background: #fff; border: 1px solid var(--border); border-radius: 12px;';
+                div.dataset.fileId = fileItem.id;
+                div.innerHTML = createFileItemHTML(fileItem);
+                fileList.appendChild(div);
+            });
+
+            // 如果没有文件
+            if (state.uploadedFiles.length === 0) {
+                fileList.innerHTML = '<div class="text-center p-4" style="color: var(--text-muted);">📭 暂无文件</div>';
+            }
+        }
+
+        function createFileItemHTML(fileItem) {
+            let statusHTML = '';
+            if (fileItem.status === 'uploading') {
+                statusHTML = `
+                    <div class="flex items-center">
+                        <div class="w-16 h-2 rounded-full mr-2 overflow-hidden" style="background: var(--border);">
+                            <div class="h-full" style="width: ${fileItem.progress}%; background: var(--accent);"></div>
+                        </div>
+                        <span class="text-xs" style="color: var(--fg2);">⏳ ${fileItem.progress}%</span>
+                    </div>
+                `;
+            } else if (fileItem.status === 'success') {
+                statusHTML = `
+                    <div class="flex items-center">
+                        <span class="mr-1">✅</span>
+                        <span class="text-sm" style="color: var(--success);">已上传</span>
+                    </div>
+                `;
+            } else {
+                statusHTML = `
+                    <div class="flex items-center">
+                        <span class="mr-1">❌</span>
+                        <span class="text-sm" style="color: var(--error);">上传失败</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="flex-1">
+                    <div class="font-medium truncate" style="color: var(--fg0);">${fileItem.name}</div>
+                    <div class="text-sm" style="color: var(--text-muted);">${formatFileSize(fileItem.size)}</div>
+                </div>
+                ${statusHTML}
+            `;
+        }
+
+        // ==================== 预览模块 ====================
+
+        function updatePreview() {
+            if (state.uploadedFiles.length === 0 || state.uploadedFiles.every(f => f.status !== 'success')) {
+                // 没有成功上传的文件，显示空状态
+                document.getElementById('preview-desktop').classList.add('hidden');
+                document.getElementById('preview-mobile').classList.add('hidden');
+                document.getElementById('preview-empty').classList.remove('hidden');
+                return;
+            }
+
+            // 有成功上传的文件
+            document.getElementById('preview-empty').classList.add('hidden');
+            updatePreviewVisibility();
+
+            // 更新PDF预览源（添加时间戳避免缓存）
+            const timestamp = new Date().getTime();
+            const pdfUrl = `/preview.pdf?token=${encodeURIComponent(state.authToken)}&t=${timestamp}`;
+
+            // 桌面端：更新embed
+            const embed = document.getElementById('pdf-embed');
+            embed.src = pdfUrl;
+
+            // 移动端：更新预览按钮链接
+            const previewBtn = document.getElementById('preview-fullscreen');
+            previewBtn.onclick = () => {
+                window.open(pdfUrl, '_blank');
+            };
+
+            // 更新页数信息（需要从后端获取，这里简化显示）
+            const totalPages = state.uploadedFiles.reduce((sum, file) => sum + (file.pages || 1), 0);
+            document.getElementById('preview-info').textContent = `PDF已生成（共 ${totalPages} 页）`;
+        }
+
+        function updatePreviewVisibility() {
+            if (state.isMobile) {
+                document.getElementById('preview-desktop').classList.add('hidden');
+                document.getElementById('preview-mobile').classList.remove('hidden');
+            } else {
+                document.getElementById('preview-desktop').classList.remove('hidden');
+                document.getElementById('preview-mobile').classList.add('hidden');
+            }
+        }
+
+        // ==================== 打印设置UI交互 ====================
+
+        function initPrintSettings() {
+            const copiesInput = document.getElementById('copies-input');
+            const copiesDecrement = document.getElementById('copies-decrement');
+            const copiesIncrement = document.getElementById('copies-increment');
+
+            const sidesOne = document.getElementById('sides-one');
+            const sidesTwo = document.getElementById('sides-two');
+
+            const colorBw = document.getElementById('color-bw');
+            const colorColor = document.getElementById('color-color');
+
+            // 初始化显示
+            copiesInput.value = state.printSettings.copies;
+            updateSidesButtons();
+            updateColorButtons();
+
+            // 份数控制
+            copiesDecrement.addEventListener('click', () => {
+                if (state.printSettings.copies > 1) {
+                    state.printSettings.copies--;
+                    copiesInput.value = state.printSettings.copies;
+                }
+            });
+
+            copiesIncrement.addEventListener('click', () => {
+                if (state.printSettings.copies < 99) {
+                    state.printSettings.copies++;
+                    copiesInput.value = state.printSettings.copies;
+                }
+            });
+
+            // 单双面控制
+            sidesOne.addEventListener('click', () => {
+                state.printSettings.sides = 'one-sided';
+                updateSidesButtons();
+            });
+
+            sidesTwo.addEventListener('click', () => {
+                state.printSettings.sides = 'two-sided';
+                updateSidesButtons();
+            });
+
+            // 色彩控制
+            colorBw.addEventListener('click', () => {
+                state.printSettings.color_mode = 'monochrome';
+                updateColorButtons();
+            });
+
+            colorColor.addEventListener('click', () => {
+                state.printSettings.color_mode = 'color';
+                updateColorButtons();
+            });
+
+            function updateSidesButtons() {
+                if (state.printSettings.sides === 'one-sided') {
+                    sidesOne.style.background = 'var(--accent)';
+                    sidesOne.style.color = '#fbf1c7';
+                    sidesTwo.style.background = 'var(--bg2)'
+                    sidesTwo.style.color = 'var(--fg0)';
+                } else {
+                    sidesTwo.style.background = 'var(--accent)';
+                    sidesTwo.style.color = '#fbf1c7';
+                    sidesOne.style.background = 'var(--bg2)';
+                    sidesOne.style.color = 'var(--fg0)';
+                }
+            }
+
+            function updateColorButtons() {
+                if (state.printSettings.color_mode === 'monochrome') {
+                    colorBw.style.background = 'var(--accent)';
+                    colorBw.style.color = '#fbf1c7';
+                    colorColor.style.background = 'var(--bg2)';
+                    colorColor.style.color = 'var(--fg0)';
+                } else {
+                    colorColor.style.background = 'var(--accent)';
+                    colorColor.style.color = '#fbf1c7';
+                    colorBw.style.background = 'var(--bg2)';
+                    colorBw.style.color = 'var(--fg0)';
+                }
+            }
+        }
+
+        // ==================== 打印机状态轮询 ====================
+
+        function startPrinterStatusPolling() {
+            // 先清除现有定时器
+            if (state.printerStatusInterval) {
+                clearInterval(state.printerStatusInterval);
+            }
+
+            // 立即查询一次
+            updatePrinterStatus();
+
+            // 每30秒轮询
+            state.printerStatusInterval = setInterval(updatePrinterStatus, 30000);
+        }
+
+        async function updatePrinterStatus() {
+            try {
+                const statusData = await apiRequest('/printer/status');
+                state.printerStatus = statusData.status;
+
+                const statusElement = document.getElementById('printer-status');
+                const dot = statusElement.querySelector('.rounded-full');
+                const text = statusElement.querySelector('span:last-child');
+
+                if (statusData.status === 'online') {
+                    dot.style.background = 'var(--success)';
+                    text.textContent = (statusData.printer_name ? '🟢 ' + statusData.printer_name : '🟢 打印机在线');
+                    text.style.color = 'var(--fg1)';
+                } else {
+                    dot.style.background = 'var(--error)';
+                    text.textContent = (statusData.error ? '🔴 ' + statusData.error : '🔴 打印机离线');
+                    text.style.color = 'var(--fg1)';
+                }
+            } catch (error) {
+                console.error('获取打印机状态失败:', error);
+                const statusElement = document.getElementById('printer-status');
+                const dot = statusElement.querySelector('.rounded-full');
+                const text = statusElement.querySelector('span:last-child');
+                dot.style.background = 'var(--warning)';
+                text.textContent = '🟡 状态查询失败';
+                text.style.color = 'var(--fg1)';
+            }
+        }
+
+        // ==================== 打印和取消功能 ====================
+
+        function initPrintAndCancel() {
+            const cancelBtn = document.getElementById('cancel-btn');
+            const printBtn = document.getElementById('print-btn');
+            const cancelBtnDesktop = document.getElementById('cancel-btn-desktop');
+            const printBtnDesktop = document.getElementById('print-btn-desktop');
+
+            // 移动端按钮
+            cancelBtn.addEventListener('click', handleCancel);
+            printBtn.addEventListener('click', handlePrint);
+
+            // 桌面端按钮
+            cancelBtnDesktop.addEventListener('click', handleCancel);
+            printBtnDesktop.addEventListener('click', handlePrint);
+
+            // 退出按钮
+            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+        }
+
+        async function handlePrint() {
+            // 检查是否有上传的文件
+            if (state.uploadedFiles.length === 0) {
+                showToast('请先上传文件', 'error');
+                return;
+            }
+
+            // 检查是否有成功上传的文件
+            const hasSuccessFile = state.uploadedFiles.some(f => f.status === 'success');
+            if (!hasSuccessFile) {
+                showToast('请等待文件上传完成', 'error');
+                return;
+            }
+
+            // 禁用按钮，显示加载
+            disablePrintButtons(true);
+            showLoading('打印中...');
+
+            try {
+                const printData = {
+                    copies: state.printSettings.copies,
+                    sides: state.printSettings.sides,
+                    color_mode: state.printSettings.color_mode
+                };
+
+                await apiRequest('/print', {
+                    method: 'POST',
+                    body: printData
+                });
+
+                showToast('打印任务已提交', 'success');
+
+                // 重置界面
+                resetAfterPrint();
+
+            } catch (error) {
+                showToast(`打印失败: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+                disablePrintButtons(false);
+            }
+        }
+
+        async function handleCancel() {
+            if (state.uploadedFiles.length === 0) {
+                showToast('没有文件需要取消', 'info');
+                return;
+            }
+
+            showLoading('取消中...');
+
+            try {
+                await apiRequest('/cancel', {
+                    method: 'POST'
+                });
+
+                showToast('已取消打印任务', 'success');
+
+                // 清空文件列表和预览
+                state.uploadedFiles = [];
+                updateFileList();
+                updatePreview();
+
+            } catch (error) {
+                showToast(`取消失败: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('auth_token');
+            // 清除轮询
+            if (state.printerStatusInterval) {
+                clearInterval(state.printerStatusInterval);
+                state.printerStatusInterval = null;
+            }
+            // 刷新页面
+            window.location.reload();
+        }
+
+        function disablePrintButtons(disabled) {
+            const buttons = [
+                document.getElementById('print-btn'),
+                document.getElementById('print-btn-desktop'),
+                document.getElementById('cancel-btn'),
+                document.getElementById('cancel-btn-desktop')
+            ];
+
+            buttons.forEach(btn => {
+                if (btn) {
+                    btn.disabled = disabled;
+                    if (disabled) {
+                        if (btn.id.includes('print')) {
+                            btn.textContent = '打印中...';
+                        }
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        if (btn.id.includes('print')) {
+                            btn.textContent = '打印';
+                        }
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+            });
+        }
+
+        function resetAfterPrint() {
+            state.uploadedFiles = [];
+            updateFileList();
+            updatePreview();
+            // 重置打印设置为默认
+            state.printSettings.copies = 1;
+            state.printSettings.sides = 'one-sided';
+            state.printSettings.color_mode = 'monochrome';
+
+            // 更新UI
+            document.getElementById('copies-input').value = 1;
+            initPrintSettings();
+        }
+
+        // ==================== 页面初始化 ====================
+
+        function init() {
+            console.log('Just-Printing-Server 前端初始化');
+
+            // 初始化认证
+            initAuth();
+
+            // 初始化文件上传
+            initFileUpload();
+
+            // 初始化打印和取消
+            initPrintAndCancel();
+
+            // 初始化打印设置（在认证成功后调用）
+            // initPrintSettings() 会在认证成功后调用
+
+            // 监听窗口大小变化
+            window.addEventListener('resize', checkDeviceWidth);
+
+            // 初始设备检测
+            checkDeviceWidth();
+        }
+
+        // 启动应用
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
