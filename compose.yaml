@@ -3,7 +3,7 @@ services:
     build:
       context: .
       args:
-        BASE_IMAGE: ${REGISTRY}python:3.11-slim
+        BASE_IMAGE: ${REGISTRY}/python:3.11-slim
     network_mode: host  # 使用主机网络，直接监听主机端口
     environment:
       - PRINTER_IPP_URL=${PRINTER_IPP_URL}
