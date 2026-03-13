@@ -15,22 +15,35 @@
 
 ## 快速开始
 
-### 1. 配置环境变量
+### 方式一：使用 Docker Compose 启动
 
 ```bash
 cp .env.example .env
 # 编辑 .env 配置你的打印机信息
+
+docker compose up -d
 ```
 
-### 2. 使用 Docker Compose 启动
+### 方式二：使用 uv 启动（本地开发）
 
 ```bash
-docker compose up -d
+# 如果未安装 uv，先安装它
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 复制环境变量文件
+cp .env.example .env
+# 编辑 .env 配置你的打印机信息
+
+# 初始化 uv 项目（创建 .venv）
+uv sync
+
+# 运行服务
+uv run uvicorn main:app --host 0.0.0.0 --port 3001
 ```
 
 ### 3. 访问 Web 界面
 
-在浏览器中打开 `http://localhost:8000`。
+在浏览器中打开 `http://localhost:3001`。
 
 ## API 接口
 

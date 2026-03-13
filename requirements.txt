@@ -1,4 +1,5 @@
 aiofiles>=25.1.0
+python-dotenv>=1.0.0
 fastapi>=0.129.2
 img2pdf>=0.6.3
 pillow>=12.1.1

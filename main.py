@@ -41,6 +41,8 @@ import img2pdf
 import PyPDF2
 from pyipp import IPP
 from pyipp.exceptions import IPPError
+from dotenv import load_dotenv
+load_dotenv()
 
 # 配置日志
 logging.basicConfig(

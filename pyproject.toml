@@ -1,0 +1,19 @@
+[project]
+name = "just-printing-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.11.9"
+dependencies = [
+    "aiofiles>=25.1.0",
+    "fastapi>=0.129.2",
+    "python-dotenv>=1.0.0",
+    "img2pdf>=0.6.3",
+    "pillow>=12.1.1",
+    "pyipp>=0.17.2",
+    "pypdf2>=3.0.1",
+    "python-magic>=0.4.27",
+    "python-multipart>=0.0.22",
+    "slowapi>=0.1.9",
+    "uvicorn[standard]>=0.41.0",
+]

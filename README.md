@@ -15,22 +15,35 @@ A minimal, stateless printing relay service built with FastAPI.
 
 ## Quick Start
 
-### 1. Configure Environment
+### Option A: Run with Docker Compose
 
 ```bash
 cp .env.example .env
 # Edit .env with your printer settings
+
+docker compose up -d
 ```
 
-### 2. Run with Docker Compose
+### Option B: Run with uv (local development)
 
 ```bash
-docker compose up -d
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Copy environment file
+cp .env.example .env
+# Edit .env with your printer settings
+
+# Initialize uv project (creates .venv)
+uv sync
+
+# Run the server
+uv run uvicorn main:app --host 0.0.0.0 --port 3001
 ```
 
 ### 3. Access the Web UI
 
-Open `http://localhost:8000` in your browser.
+Open `http://localhost:3001` in your browser.
 
 ## API Endpoints
 

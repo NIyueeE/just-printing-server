@@ -1,3 +1,9 @@
 .env
 github_key
 github_key.pub
+
+# uv
+.venv/
+uv.lock
+.python-version
+__pycache__/

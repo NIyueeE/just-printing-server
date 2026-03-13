@@ -467,28 +467,6 @@
                 setTimeout(() => toast.remove(), 300);
             });
         };
-            toast.className = 'p-4 shadow-lg flex justify-between items-center';
-            toast.style.cssText = `background: #fff; border-left: 4px solid ${borderColors[type]}; border-radius: 8px; color: var(--fg0);`;
-            toast.innerHTML = `
-                <span>${message}</span>
-                <button class="ml-4" style="color: var(--text-muted);">✕</button>
-            `;
-            container.appendChild(toast);
-
-            // 自动消失
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.style.opacity = '0';
-                    toast.style.transition = 'opacity 0.3s';
-                    setTimeout(() => toast.remove(), 300);
-                }
-            }, 3000);
-
-            // 手动关闭
-            toast.querySelector('button').addEventListener('click', () => {
-                toast.remove();
-            });
-        }
 
         // 加载遮罩控制
         function showLoading(text = '处理中...') {
@@ -1192,16 +1170,6 @@
                         }
                         btn.classList.remove('opacity-50', 'cursor-not-allowed');
                         btn.style.pointerEvents = 'auto';
-                    }
-                }
-            });
-        }
-                        btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    } else {
-                        if (btn.id.includes('print')) {
-                            btn.textContent = '打印';
-                        }
-                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
                     }
                 }
             });
