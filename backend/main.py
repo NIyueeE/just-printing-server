@@ -21,11 +21,13 @@ API端点：
 import os
 import io
 import struct
+import secrets
 import logging
 import asyncio
 import aiohttp
 import tempfile
 import mimetypes
+from contextlib import asynccontextmanager
 from typing import Dict, Optional, List, Tuple
 from datetime import datetime
 from dataclasses import dataclass, field
@@ -52,12 +54,44 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 创建FastAPI应用
+# 创建FastAPI应用（带生命周期管理）
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时：启动后台任务清理过期会话
+    cleanup_task = asyncio.create_task(session_cleanup_loop())
+    yield
+    # 关闭时：取消后台任务
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+    # 关闭全局 aiohttp session
+    if hasattr(app.state, 'http_session') and app.state.http_session:
+        await app.state.http_session.close()
+
 app = FastAPI(
     title="Just-Printing-Server",
     description="极简打印中继服务",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
+
+async def session_cleanup_loop():
+    """后台任务：每5分钟清理一次过期会话"""
+    while True:
+        await asyncio.sleep(300)  # 5分钟
+        cleaned = cleanup_sessions()
+        if cleaned > 0:
+            logger.info(f"后台清理: 已清理 {cleaned} 个过期会话")
+
+# 全局 aiohttp.ClientSession (按需创建)
+async def get_http_session() -> aiohttp.ClientSession:
+    """获取或创建全局 HTTP session"""
+    if not hasattr(app.state, 'http_session') or app.state.http_session is None:
+        timeout = aiohttp.ClientTimeout(total=30)
+        app.state.http_session = aiohttp.ClientSession(timeout=timeout)
+    return app.state.http_session
 
 # 限流器配置
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
@@ -162,8 +196,8 @@ async def verify_token(
             detail={"error": "未提供访问令牌"}
         )
 
-    # 验证token是否等于环境变量ACCESS_TOKEN
-    if token != config.ACCESS_TOKEN:
+    # 验证token是否等于环境变量ACCESS_TOKEN (使用 timing-safe 比较)
+    if not secrets.compare_digest(token, config.ACCESS_TOKEN):
         logger.warning(f"认证失败：无效token (提供: {token[:8]}...)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -226,7 +260,7 @@ def validate_file(file: UploadFile) -> Tuple[bool, str]:
     max_size_bytes = config.MAX_UPLOAD_MB * 1024 * 1024
     file.file.seek(0, 2)  # 移动到文件末尾
     file_size = file.file.tell()
-    file.file.seek(0)  # 重置文件指针
+    file.file.seek(0)  # 重置文件指针（供后续读取使用）
     if file_size > max_size_bytes:
         return False, f"文件大小超过限制 ({config.MAX_UPLOAD_MB}MB)"
 
@@ -318,7 +352,7 @@ def get_pdf_page_count(pdf_bytes: bytes) -> int:
     try:
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
         return len(pdf_reader.pages)
-    except:
+    except Exception:
         return 0
 
 # 数据模型
@@ -332,11 +366,14 @@ class PrintRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
-    try:
-        with open("frontend/index.html", "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Frontend file not found")
+    # 尝试从缓存读取，如果缓存为空则加载
+    if not hasattr(serve_frontend, '_cached_html'):
+        try:
+            with open("frontend/index.html", "r", encoding="utf-8") as f:
+                serve_frontend._cached_html = f.read()
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Frontend file not found")
+    return serve_frontend._cached_html
 
 @app.get("/health")
 async def health_check():
@@ -360,7 +397,7 @@ async def authenticate(auth_request: AuthRequest):
             detail={"error": "未提供访问令牌"}
         )
 
-    if token != config.ACCESS_TOKEN:
+    if not secrets.compare_digest(token, config.ACCESS_TOKEN):
         logger.warning(f"认证失败：无效token (提供: {token[:8]}...)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -596,9 +633,8 @@ async def print_document(
     if not session.pdf_bytes:
         raise HTTPException(status_code=404, detail={"error": "PDF为空，请先上传文件"})
 
-    # 3. 读取并转换打印机 URI
-    # 从 .env 读取 ipp://localhost:631/printers/LJ4000D
-    printer_uri = os.getenv("PRINTER_IPP_URL", "ipp://localhost:631/printers/default")
+    # 3. 读取并转换打印机 URI (使用统一配置)
+    printer_uri = config.PRINTER_IPP_URL or "ipp://localhost:631/printers/default"
     
     # aiohttp 走的是原生 TCP 请求，需要将 ipp:// 转换为 http://，ipps:// 转换为 https://
     http_url = printer_uri.replace("ipp://", "http://").replace("ipps://", "https://")
@@ -617,16 +653,15 @@ async def print_document(
     )
 
     try:
-        # 设置超时
-        timeout = aiohttp.ClientTimeout(total=30)
-        async with aiohttp.ClientSession(timeout=timeout) as http_session:
-            logger.info(f"正在发送 IPP 打印任务到: {http_url} (URI: {printer_uri})")
-            
-            # IPP 协议固定使用的 Content-Type
-            headers = {"Content-Type": "application/ipp"}
-            
-            # 执行纯净的网络 POST 请求
-            async with http_session.post(http_url, data=ipp_payload, headers=headers) as resp:
+        # 复用全局 HTTP session (连接池)
+        http_session = await get_http_session()
+        logger.info(f"正在发送 IPP 打印任务到: {http_url} (URI: {printer_uri})")
+
+        # IPP 协议固定使用的 Content-Type
+        headers = {"Content-Type": "application/ipp"}
+
+        # 执行纯净的网络 POST 请求
+        async with http_session.post(http_url, data=ipp_payload, headers=headers) as resp:
                 response_bytes = await resp.read()
 
                 if resp.status != 200:
