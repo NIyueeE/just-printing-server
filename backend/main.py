@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from fastapi import FastAPI, HTTPException, Depends, Header, Query, status, UploadFile, File, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -332,7 +333,7 @@ class PrintRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     try:
-        with open("index.html", "r", encoding="utf-8") as f:
+        with open("frontend/index.html", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Frontend file not found")
@@ -681,8 +682,13 @@ async def cancel_session(
         return {"status": "cancelled", "message": "会话不存在或已被取消"}
 
 
+# 挂载静态文件目录（前端）- 必须放在所有路由之后
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+
 # 其他端点将在后续模块中添加
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3001)
+    port = int(os.getenv("PORT", "3001"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

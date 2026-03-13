@@ -1,0 +1,193 @@
+        :root {
+            /* Gruvbox Light 背景层次 - 优化对比度 */
+            --bg0: #fbf1c7;           /* 最淡背景 - 奶油色 */
+            --bg1: #f5eca8;           /* 提亮 - 更淡的背景 */
+            --bg2: #f2e5bc;           /* 卡片/区块背景 */
+            --bg3: #ebdbb2;           /* 深色背景 */
+            --bg4: #d5c4a1;           /* 最深背景 */
+
+            /* Gruvbox Light 前景/文字 - 增强对比度 */
+            --fg0: #1a1a1a;           /* 主要文字 - 更深更清晰 */
+            --fg1: #333333;           /* 次要文字 */
+            --fg2: #4a4a4a;           /* 弱化文字 - 提升可读性 */
+            --fg3: #665c54;           /* 最淡文字 */
+
+            /* Gruvbox 强调色 */
+            --accent-red: #c14a4a;    /* 提升亮度红 */
+            --accent-green: #8da101;  /* 明亮橄榄绿 */
+            --accent-yellow: #d4870f; /* 明亮橙 */
+            --accent-blue: #0a7d8c;   /* 更亮青蓝 - 主强调色 */
+            --accent-purple: #b3558b; /* 明亮紫红 */
+            --accent-aqua: #489b68;   /* 青绿 - 信息提示 */
+            --accent-orange: #cf5c00; /* 橙色 - 高亮 */
+
+            /* 语义化映射 - 优化对比度 */
+            --bg-base: #fbf1c7;       /* 页面背景 */
+            --bg-elevated: #fcf6de;   /* 卡片背景 - 提亮 */
+            --bg-muted: #f2e5bc;      /* 次要区块 */
+            --text-primary: #1a1a1a;  /* 主文字 - 更深 */
+            --text-secondary: #4a4a4a;/* 次文字 - 更清晰 */
+            --text-muted: #665c54;    /* 弱文字 */
+            --accent: #0a7d8c;        /* 主强调色 - 亮青蓝 */
+            --accent-hover: #096e7d;  /* 悬停状态 */
+            --success: #8da101;       /* 成功色 - 明亮橄榄绿 */
+            --error: #c14a4a;         /* 错误色 - 明亮红 */
+            --warning: #d4870f;       /* 警告色 - 明亮橙 */
+            --border: #d5c4a1;        /* 边框色 */
+            --border-light: #e8dcb8;  /* 浅边框 */
+        }
+        /* Toast 动画 */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* 加载动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.98); }
+        }
+
+        /* 脉冲动画 - 打印机在线状态 */
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+
+        /* 边框流动动画 */
+        @keyframes border-dance {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 浮雕动画 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* 渐变背景动画 */
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 全局过渡效果 */
+        .transition-smooth {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 按钮悬停效果 */
+        .btn-hover-lift {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-hover-lift:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 卡片悬停效果 */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
+        }
+
+        /* 输入框焦点效果 */
+        input:focus {
+            outline: none;
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 4px rgba(10, 125, 140, 0.15);
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--bg4);
+        }
+
+        /* 移动端响应式优化 */
+        @media (max-width: 768px) {
+            header {
+                padding: 12px 16px !important;
+            }
+
+            header h1 {
+                font-size: 16px !important;
+            }
+
+            #upload-area {
+                padding: 24px 16px !important;
+                border-radius: 8px !important;
+            }
+
+            #upload-area .text-5xl {
+                font-size: 2.5rem !important;
+            }
+
+            #upload-area p {
+                font-size: 14px !important;
+            }
+
+            .container {
+                padding: 16px !important;
+            }
+
+            /* 调整移动端按钮 */
+            #cancel-btn, #print-btn {
+                padding: 12px 20px !important;
+                font-size: 14px !important;
+            }
+
+            /* 优化打印设置在移动端的显示 */
+            .mb-5, .mb-6 {
+                margin-bottom: 16px !important;
+            }
+
+            /* 预览区域移动端优化 */
+            #preview-mobile .text-5xl {
+                font-size: 3rem !important;
+            }
+
+            #preview-mobile button {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            /* Toast 移动端优化 */
+            #toast-container {
+                left: 16px;
+                right: 16px;
+                bottom: 80px !important;
+            }
+
+            #toast-container > div {
+                width: 100%;
+            }
+        }
