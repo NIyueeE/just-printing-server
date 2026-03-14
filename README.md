@@ -13,6 +13,30 @@ A minimal, stateless printing relay service built with FastAPI.
 - **Rate Limiting**: Built-in IP-based rate limiting
 - **Podman Ready**: Easy deployment with Podman Compose
 
+## Use Cases
+
+### Wireless Home Printer
+Connect your home printer directly to your network. Just-Printing-Server works with any IPP-compatible printer:
+- **HP printers** (e.g., HP LaserJet, HP OfficeJet)
+- **Brother printers** (e.g., Brother HL, MFC series)
+- **Canon printers** (e.g., Canon PIXMA, imageRUNNER)
+- **EPSON printers** (e.g., EPSON WorkForce, EcoTank)
+
+No need to install printer drivers or apps on your phone/laptop.
+
+### Simple Deployment
+Deploy on minimal hardware:
+- Raspberry Pi (3B+/4/5)
+- NAS devices (with Docker/Podman support)
+- Mini PCs
+- Any Linux server
+
+### How It Works
+1. Your printer is connected to WiFi and has an IPP address
+2. Deploy Just-Printing-Server on a device on the same network
+3. Access the web UI from any device (phone, tablet, laptop)
+4. Upload photos or PDFs, adjust settings, and print - that's it!
+
 ## Project Structure
 
 ```
@@ -61,6 +85,13 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 3001
 ### 3. Access the Web UI
 
 Open `http://localhost:3001` in your browser.
+
+The web interface provides:
+- **Drag & drop file upload** - Support for JPG, PNG, and PDF files
+- **PDF preview** - View merged documents before printing
+- **Print settings** - Copies, sides, color, paper size, quality, orientation
+- **Printer status** - Real-time printer online/offline status
+- **Mobile responsive** - Works on phones and tablets
 
 ## API Endpoints
 

@@ -13,6 +13,30 @@
 - **限流保护**: 内置基于 IP 的速率限制
 - **Podman 就绪**: 支持 Podman Compose 一键部署
 
+## 使用场景
+
+### 无线连接家庭打印机
+将您的家庭打印机直接连接到网络。Just-Printing-Server 支持任何 IPP 协议的打印机：
+- **HP 打印机**（如 HP LaserJet、HP OfficeJet）
+- **Brother 打印机**（如 Brother HL、MFC 系列）
+- **Canon 打印机**（如 Canon PIXMA、imageRUNNER）
+- **EPSON 打印机**（如 EPSON WorkForce、EcoTank）
+
+无需在手机或电脑上安装任何打印机驱动或应用。
+
+### 轻量部署
+可部署在以下设备上：
+- 树莓派（3B+/4/5）
+- NAS 设备（支持 Docker/Podman）
+- 迷你主机
+- 任何 Linux 服务器
+
+### 工作原理
+1. 您的打印机已连接 WiFi 并拥有 IPP 地址
+2. 在同一网络下的设备上部署 Just-Printing-Server
+3. 从任何设备（手机、平板、笔记本）访问 Web 界面
+4. 上传照片或 PDF，调整设置，点击打印 - 就是这么简单！
+
 ## 项目结构
 
 ```
@@ -61,6 +85,13 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 3001
 ### 3. 访问 Web 界面
 
 在浏览器中打开 `http://localhost:3001`。
+
+Web 界面功能：
+- **拖拽上传文件** - 支持 JPG、PNG 和 PDF 文件
+- **PDF 预览** - 打印前预览合并后的文档
+- **打印设置** - 份数、单双面、色彩、纸张尺寸、质量、方向
+- **打印机状态** - 实时显示打印机在线/离线状态
+- **移动端适配** - 在手机和平板上也能完美使用
 
 ## API 接口
 
