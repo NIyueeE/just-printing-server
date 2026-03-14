@@ -875,6 +875,16 @@
 
                 const text = document.getElementById('status-text');
 
+                // 添加空值检查：如果元素不存在，停止轮询
+                if (!text) {
+                    console.warn('status-text 元素不存在，停止轮询');
+                    if (state.printerStatusInterval) {
+                        clearInterval(state.printerStatusInterval);
+                        state.printerStatusInterval = null;
+                    }
+                    return;
+                }
+
                 if (statusData.status === 'online') {
                     text.textContent = (statusData.printer_name ? '🟢 ' + statusData.printer_name : '🟢 打印机在线');
                     text.style.color = 'var(--fg1)';
@@ -887,6 +897,17 @@
             } catch (error) {
                 console.error('获取打印机状态失败:', error);
                 const text = document.getElementById('status-text');
+
+                // 同样添加空值检查
+                if (!text) {
+                    console.warn('status-text 元素不存在，停止轮询');
+                    if (state.printerStatusInterval) {
+                        clearInterval(state.printerStatusInterval);
+                        state.printerStatusInterval = null;
+                    }
+                    return;
+                }
+
                 text.textContent = '🟡 状态查询失败';
                 text.style.color = 'var(--fg1)';
                 disablePrintControls();
