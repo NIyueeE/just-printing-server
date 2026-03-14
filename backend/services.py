@@ -506,7 +506,10 @@ async def get_printer_capabilities(token: str) -> dict:
                 "sides": [],
                 "color_mode": [],
                 "print_quality": [],
-                "orientation": []
+                "orientation": [],
+                "document_formats": [],
+                "printer_resolution": [],
+                "printer_name": ""
             }
 
             # 获取支持的 media (纸张尺寸)
@@ -532,6 +535,25 @@ async def get_printer_capabilities(token: str) -> dict:
                 capabilities["print_quality"] = list(printer.print_quality_supported)
             else:
                 capabilities["print_quality"] = default_capabilities["print_quality"]
+
+            # 获取支持的 document-format (文档格式)
+            if hasattr(printer, 'document_formats_supported') and printer.document_formats_supported:
+                capabilities["document_formats"] = list(printer.document_formats_supported)
+            else:
+                # 默认支持 PDF 和常见图片格式
+                capabilities["document_formats"] = ["application/pdf", "image/jpeg", "image/png"]
+
+            # 获取支持的 printer-resolution (打印分辨率)
+            if hasattr(printer, 'printer_resolution_supported') and printer.printer_resolution_supported:
+                capabilities["printer_resolution"] = list(printer.printer_resolution_supported)
+            else:
+                capabilities["printer_resolution"] = []
+
+            # 获取打印机名称
+            if hasattr(printer, 'printer_name') and printer.printer_name:
+                capabilities["printer_name"] = printer.printer_name
+            else:
+                capabilities["printer_name"] = config.PRINTER_NAME or "Unknown Printer"
 
             # orientation-requested 通常不是打印机属性，使用默认值
             capabilities["orientation"] = default_capabilities["orientation"]

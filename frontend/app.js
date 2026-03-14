@@ -8,8 +8,10 @@
                 color_mode: 'monochrome',
                 media: 'iso-a4',
                 print_quality: 'normal',
-                orientation: 'portrait'
+                orientation: 'portrait',
+                resolution: ''
             },
+            supportedDocumentFormats: ['image/jpeg', 'image/png', 'application/pdf'],  // 支持的文档格式
             capabilities: null,  // 打印机能力
             printerStatus: 'unknown',
             printerStatusInterval: null,
@@ -276,18 +278,26 @@
             });
 
             async function handleFiles(files) {
-                // 过滤支持的文件类型
-                const supportedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'image/jpg'];
-                const validFiles = files.filter(file =>
-                    supportedTypes.includes(file.type.toLowerCase()) ||
-                    file.name.toLowerCase().endsWith('.jpg') ||
-                    file.name.toLowerCase().endsWith('.jpeg') ||
-                    file.name.toLowerCase().endsWith('.png') ||
-                    file.name.toLowerCase().endsWith('.pdf')
-                );
+                // 过滤支持的文件类型（使用打印机支持的格式）
+                const supportedTypes = state.supportedDocumentFormats;
+                const validFiles = files.filter(file => {
+                    // 检查 MIME 类型
+                    if (supportedTypes.includes(file.type.toLowerCase())) {
+                        return true;
+                    }
+                    // 检查文件扩展名
+                    const ext = file.name.toLowerCase().split('.').pop();
+                    const extMap = {
+                        'jpg': 'image/jpeg',
+                        'jpeg': 'image/jpeg',
+                        'png': 'image/png',
+                        'pdf': 'application/pdf'
+                    };
+                    return extMap[ext] && supportedTypes.includes(extMap[ext]);
+                });
 
                 if (validFiles.length === 0) {
-                    showToast('仅支持JPG、PNG、PDF文件', 'error');
+                    showToast('文件格式不支持', 'error');
                     return;
                 }
 
@@ -521,6 +531,7 @@
             const colorColor = document.getElementById('color-color');
 
             const mediaSelect = document.getElementById('media-select');
+            const resolutionSelect = document.getElementById('resolution-select');
             const qualityDraft = document.getElementById('quality-draft');
             const qualityNormal = document.getElementById('quality-normal');
             const qualityHigh = document.getElementById('quality-high');
@@ -574,6 +585,11 @@
             // 纸张尺寸控制
             mediaSelect.addEventListener('change', () => {
                 state.printSettings.media = mediaSelect.value;
+            });
+
+            // 打印分辨率控制
+            resolutionSelect.addEventListener('change', () => {
+                state.printSettings.resolution = resolutionSelect.value;
             });
 
             // 打印质量控制
@@ -714,19 +730,50 @@
                 }
             }
 
-            // 更新单双面按钮（禁用不支持的选项）
+            // 更新打印分辨率下拉框
+            const resolutionSelect = document.getElementById('resolution-select');
+            if (caps.printer_resolution && Array.isArray(caps.printer_resolution) && caps.printer_resolution.length > 0) {
+                enableSelect(resolutionSelect);
+                resolutionSelect.innerHTML = '';
+                caps.printer_resolution.forEach(res => {
+                    const option = document.createElement('option');
+                    option.value = res;
+                    // 简化分辨率显示（如 "300dpi" 或 "300x300dpi"）
+                    option.textContent = res;
+                    resolutionSelect.appendChild(option);
+                });
+                if (caps.printer_resolution.length > 0) {
+                    state.printSettings.resolution = caps.printer_resolution[0];
+                    resolutionSelect.value = caps.printer_resolution[0];
+                }
+            } else {
+                resolutionSelect.innerHTML = '<option value="">不支持</option>';
+                disableSelect(resolutionSelect);
+            }
+
+            // 更新打印机名称显示
+            const printerNameEl = document.getElementById('printer-name');
+            if (caps.printer_name) {
+                printerNameEl.textContent = caps.printer_name;
+            }
+
+            // 更新支持的文档格式
+            if (caps.document_formats && Array.isArray(caps.document_formats) && caps.document_formats.length > 0) {
+                state.supportedDocumentFormats = caps.document_formats;
+            }
+
+            // 更新单双面按钮（不禁用双面选项，因为有些打印机支持半自动双面打印）
             const sidesOne = document.getElementById('sides-one');
             const sidesTwo = document.getElementById('sides-two');
             if (caps.sides && Array.isArray(caps.sides)) {
                 const supportsOneSided = caps.sides.includes('one-sided');
-                const supportsTwoSided = caps.sides.some(s => s.includes('two-sided'));
 
+                // 只禁用单面选项（如果不支持的话），不禁用双面（支持半自动双面打印）
                 if (!supportsOneSided) {
                     disableButton(sidesOne);
                 }
-                if (!supportsTwoSided) {
-                    disableButton(sidesTwo);
-                }
+                // 注意：不禁用 sidesTwo，因为有些打印机可以半自动双面打印
+                // 打印机会吸回纸张但属性仍显示为 one-sided
             }
 
             // 更新色彩模式按钮
@@ -786,6 +833,21 @@
             btn.style.cursor = 'not-allowed';
             btn.style.pointerEvents = 'none';
             btn.title = '当前打印机不支持此选项';
+        }
+
+        function disableSelect(select) {
+            select.disabled = true;
+            select.style.opacity = '0.5';
+            select.style.cursor = 'not-allowed';
+            select.title = '当前打印机不支持此选项';
+        }
+
+        function enableSelect(select) {
+            select.disabled = false;
+            select.style.opacity = '1';
+            select.style.cursor = 'pointer';
+            select.style.pointerEvents = 'auto';
+            select.title = '';
         }
 
         // ==================== 打印机状态轮询 ====================
@@ -873,6 +935,14 @@
                 mediaSelect.style.opacity = '0.5';
                 mediaSelect.style.cursor = 'not-allowed';
             }
+
+            // 禁用打印分辨率下拉框
+            const resolutionSelect = document.getElementById('resolution-select');
+            if (resolutionSelect) {
+                resolutionSelect.disabled = true;
+                resolutionSelect.style.opacity = '0.5';
+                resolutionSelect.style.cursor = 'not-allowed';
+            }
         }
 
         function enablePrintControls() {
@@ -909,6 +979,14 @@
                 mediaSelect.disabled = false;
                 mediaSelect.style.opacity = '1';
                 mediaSelect.style.cursor = 'pointer';
+            }
+
+            // 启用打印分辨率下拉框
+            const resolutionSelect = document.getElementById('resolution-select');
+            if (resolutionSelect) {
+                resolutionSelect.disabled = false;
+                resolutionSelect.style.opacity = '1';
+                resolutionSelect.style.cursor = 'pointer';
             }
 
             // 重新应用打印机能力（禁用不支持的选项）
