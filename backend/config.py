@@ -1,0 +1,21 @@
+"""
+配置管理模块
+"""
+
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+
+class Config:
+    """应用配置类"""
+    FRONTEND_PATH = os.getenv("FRONTEND_PATH", "frontend")
+    PRINTER_IPP_URL = os.getenv("PRINTER_IPP_URL", "")
+    PRINTER_NAME = os.getenv("PRINTER_NAME", "Unknown Printer")
+    ACCESS_TOKEN = os.getenv("ACCESS_TOKEN", "")
+    MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "50"))
+    RATE_LIMIT_PER_IP = os.getenv("RATE_LIMIT_PER_IP", "5/minute")
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+
+config = Config()

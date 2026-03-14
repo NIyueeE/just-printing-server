@@ -6,4 +6,4 @@ github_key.pub
 .venv/
 uv.lock
 .python-version
-__pycache__/
+**/__pycache__/

@@ -11,17 +11,29 @@
 - **环境变量配置**: 所有配置通过环境变量注入
 - **IPP 协议**: 直接连接支持 IPP 协议的打印机
 - **限流保护**: 内置基于 IP 的速率限制
-- **Docker 就绪**: 支持 Docker Compose 一键部署
+- **Podman 就绪**: 支持 Podman Compose 一键部署
+
+## 项目结构
+
+```
+backend/
+├── __init__.py       # 包初始化
+├── main.py           # 应用入口
+├── config.py         # 配置管理
+├── models.py         # Pydantic 数据模型
+├── services.py       # 业务逻辑服务
+└── routes.py         # API 端点
+```
 
 ## 快速开始
 
-### 方式一：使用 Docker Compose 启动
+### 方式一：使用 Podman Compose 启动
 
 ```bash
 cp .env.example .env
 # 编辑 .env 配置你的打印机信息
 
-docker compose up -d
+podman-compose up -d
 ```
 
 ### 方式二：使用 uv 启动（本地开发）
@@ -38,7 +50,7 @@ cp .env.example .env
 uv sync
 
 # 运行服务
-uv run uvicorn main:app --host 0.0.0.0 --port 3001
+uv run uvicorn backend.main:app --host 0.0.0.0 --port 3001
 ```
 
 ### 3. 访问 Web 界面
@@ -73,7 +85,7 @@ uv run uvicorn main:app --host 0.0.0.0 --port 3001
 - **打印**: IPP 协议（`pyipp`）
 - **PDF 处理**: PyPDF2, img2pdf
 - **限流**: slowapi
-- **部署**: Docker + Docker Compose
+- **部署**: Podman + Podman Compose
 
 ## 许可证
 

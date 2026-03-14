@@ -11,17 +11,29 @@ A minimal, stateless printing relay service built with FastAPI.
 - **Environment Config**: All settings injected via environment variables
 - **IPP Protocol**: Direct printing to IPP-compatible printers
 - **Rate Limiting**: Built-in IP-based rate limiting
-- **Docker Ready**: Easy deployment with Docker Compose
+- **Podman Ready**: Easy deployment with Podman Compose
+
+## Project Structure
+
+```
+backend/
+├── __init__.py       # Package initialization
+├── main.py           # Application entry point
+├── config.py         # Configuration management
+├── models.py         # Pydantic data models
+├── services.py       # Business logic services
+└── routes.py         # API endpoints
+```
 
 ## Quick Start
 
-### Option A: Run with Docker Compose
+### Option A: Run with Podman Compose
 
 ```bash
 cp .env.example .env
 # Edit .env with your printer settings
 
-docker compose up -d
+podman-compose up -d
 ```
 
 ### Option B: Run with uv (local development)
@@ -38,7 +50,7 @@ cp .env.example .env
 uv sync
 
 # Run the server
-uv run uvicorn main:app --host 0.0.0.0 --port 3001
+uv run uvicorn backend.main:app --host 0.0.0.0 --port 3001
 ```
 
 ### 3. Access the Web UI
@@ -73,7 +85,7 @@ Open `http://localhost:3001` in your browser.
 - **Printing**: IPP protocol via `pyipp`
 - **PDF Processing**: PyPDF2, img2pdf
 - **Rate Limiting**: slowapi
-- **Deployment**: Docker + Docker Compose
+- **Deployment**: Podman + Podman Compose
 
 ## License
 
