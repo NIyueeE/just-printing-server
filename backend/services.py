@@ -493,7 +493,10 @@ async def get_printer_capabilities(token: str) -> dict:
         "sides": ["one-sided"],
         "color_mode": ["monochrome"],
         "print_quality": ["normal"],
-        "orientation": ["portrait"]
+        "orientation": ["portrait"],
+        "document_formats": ["application/pdf", "image/jpeg", "image/png"],
+        "printer_resolution": [],
+        "printer_name": ""
     }
 
     try:

@@ -296,7 +296,7 @@ def create_routes(app: FastAPI) -> None:
         打印投递端点
         直接通过 HTTP POST 构建原生 IPP 数据包发给打印机，不依赖任何宿主机 CUPS/lp 命令
         """
-        logger.info(f"打印请求: token {session.token[:8]}..., copies={print_request.copies}, sides={print_request.sides}, color_mode={print_request.color_mode}, media={print_request.media}, quality={print_request.print_quality}, orientation={print_request.orientation}")
+        logger.info(f"打印请求: token {session.token[:8]}..., copies={print_request.copies}, sides={print_request.sides}, color_mode={print_request.color_mode}, media={print_request.media}, quality={print_request.print_quality}, orientation={print_request.orientation}, resolution={print_request.resolution}")
 
         # 1. 验证参数
         if print_request.copies < 1 or print_request.copies > 99:
@@ -309,6 +309,7 @@ def create_routes(app: FastAPI) -> None:
             raise HTTPException(status_code=400, detail={"error": "打印质量必须是 'draft', 'normal' 或 'high'"})
         if print_request.orientation not in ["portrait", "landscape"]:
             raise HTTPException(status_code=400, detail={"error": "打印方向必须是 'portrait' 或 'landscape'"})
+        # resolution 可为空字符串（使用默认值），非空时只做记录不验证
 
         # 2. 按需生成合并PDF（仅在打印时合并）
         pdf_bytes = get_merged_pdf(session)

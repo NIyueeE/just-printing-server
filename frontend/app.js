@@ -698,7 +698,10 @@
                     sides: ['one-sided'],
                     color_mode: ['monochrome'],
                     print_quality: ['normal'],
-                    orientation: ['portrait']
+                    orientation: ['portrait'],
+                    document_formats: ['image/jpeg', 'image/png', 'application/pdf'],
+                    printer_resolution: [],
+                    printer_name: ''
                 };
             }
         }
@@ -870,28 +873,20 @@
                 const statusData = await apiRequest('/printer/status');
                 state.printerStatus = statusData.status;
 
-                const dot = document.getElementById('status-dot');
                 const text = document.getElementById('status-text');
 
                 if (statusData.status === 'online') {
-                    dot.style.background = 'var(--success)';
-                    dot.style.animation = 'pulse-dot 2s ease-in-out infinite';
                     text.textContent = (statusData.printer_name ? '🟢 ' + statusData.printer_name : '🟢 打印机在线');
                     text.style.color = 'var(--fg1)';
                     enablePrintControls();
                 } else {
-                    dot.style.background = 'var(--error)';
-                    dot.style.animation = 'none';
                     text.textContent = (statusData.error ? '🔴 ' + statusData.error : '🔴 打印机离线');
                     text.style.color = 'var(--fg1)';
                     disablePrintControls();
                 }
             } catch (error) {
                 console.error('获取打印机状态失败:', error);
-                const dot = document.getElementById('status-dot');
                 const text = document.getElementById('status-text');
-                dot.style.background = 'var(--warning)';
-                dot.style.animation = 'none';
                 text.textContent = '🟡 状态查询失败';
                 text.style.color = 'var(--fg1)';
                 disablePrintControls();
@@ -1040,7 +1035,8 @@
                     color_mode: state.printSettings.color_mode,
                     media: state.printSettings.media,
                     print_quality: state.printSettings.print_quality,
-                    orientation: state.printSettings.orientation
+                    orientation: state.printSettings.orientation,
+                    resolution: state.printSettings.resolution
                 };
 
                 await apiRequest('/print', {
@@ -1137,7 +1133,7 @@
             state.printSettings.color_mode = 'monochrome';
             state.printSettings.print_quality = 'normal';
             state.printSettings.orientation = 'portrait';
-            // 保持 media 不变，因为纸张尺寸通常不需要每次重置
+            // 保持 media 和 resolution 不变，因为通常不需要每次重置
 
             // 更新UI
             document.getElementById('copies-input').value = 1;
