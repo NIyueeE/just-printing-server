@@ -23,6 +23,11 @@ backend/
 ├── models.py         # Pydantic 数据模型
 ├── services.py       # 业务逻辑服务
 └── routes.py         # API 端点
+
+frontend/
+├── index.html        # 前端主页面
+├── app.js            # 前端 JavaScript
+└── styles.css        # 前端样式
 ```
 
 ## 快速开始
@@ -73,6 +78,7 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 3001
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
+| `FRONTEND_PATH` | frontend | 前端静态文件路径 |
 | `PRINTER_IPP_URL` | - | 打印机的 IPP 地址 |
 | `PRINTER_NAME` | - | 打印机显示名称 |
 | `ACCESS_TOKEN` | - | API 访问令牌 |

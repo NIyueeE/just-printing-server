@@ -23,6 +23,11 @@ backend/
 ├── models.py         # Pydantic data models
 ├── services.py       # Business logic services
 └── routes.py         # API endpoints
+
+frontend/
+├── index.html        # Frontend main page
+├── app.js            # Frontend JavaScript
+└── styles.css        # Frontend styles
 ```
 
 ## Quick Start
@@ -73,6 +78,7 @@ Open `http://localhost:3001` in your browser.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `FRONTEND_PATH` | frontend | Frontend static files path |
 | `PRINTER_IPP_URL` | - | IPP URL of your printer |
 | `PRINTER_NAME` | - | Printer display name |
 | `ACCESS_TOKEN` | - | API access token |

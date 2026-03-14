@@ -6,11 +6,16 @@ services:
         BASE_IMAGE: ${REGISTRY}/python:3.11-slim
     network_mode: host  # 使用主机网络，直接监听主机端口
     environment:
+      - FRONTEND_PATH=${FRONTEND_PATH:-frontend}
       - PRINTER_IPP_URL=${PRINTER_IPP_URL}
       - PRINTER_NAME=${PRINTER_NAME}
       - ACCESS_TOKEN=${ACCESS_TOKEN}
       - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-50}
       - RATE_LIMIT_PER_IP=${RATE_LIMIT_PER_IP:-5/minute}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - IPP_DEFAULT_MEDIA=${IPP_DEFAULT_MEDIA:-iso-a4}
+      - IPP_DEFAULT_QUALITY=${IPP_DEFAULT_QUALITY:-normal}
+      - IPP_DEFAULT_ORIENTATION=${IPP_DEFAULT_ORIENTATION:-portrait}
+      - IPP_USER_NAME=${IPP_USER_NAME:-fastapi}
     restart: unless-stopped
     # 无 volumes，无状态
