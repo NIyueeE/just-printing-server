@@ -32,6 +32,7 @@ from .services import (
     get_pdf_page_count,
     conversion_semaphore,
     get_printer_status,
+    get_printer_capabilities,
     build_ipp_print_request,
     get_session,
 )
@@ -260,6 +261,29 @@ def create_routes(app: FastAPI) -> None:
         return await get_printer_status(token)
 
     # ============================================================================
+    # 打印机能力端点
+    # ============================================================================
+
+    @app.get("/printer/capabilities")
+    async def get_printer_capabilities_endpoint(token: str = Depends(verify_token)):
+        """
+        获取IPP打印机能力（支持的打印选项）
+
+        返回:
+        - 成功: {
+            "media": ["iso-a4", "iso-a3", "letter", ...],
+            "sides": ["one-sided", "two-sided-long-edge", ...],
+            "color_mode": ["monochrome", "color"],
+            "print_quality": ["draft", "normal", "high"],
+            "orientation": ["portrait", "landscape"]
+          }
+        - 离线: {"status": "offline", "error": "错误详情"}
+
+        需要认证: Authorization头或token查询参数
+        """
+        return await get_printer_capabilities(token)
+
+    # ============================================================================
     # 打印投递端点
     # ============================================================================
 
@@ -272,7 +296,7 @@ def create_routes(app: FastAPI) -> None:
         打印投递端点
         直接通过 HTTP POST 构建原生 IPP 数据包发给打印机，不依赖任何宿主机 CUPS/lp 命令
         """
-        logger.info(f"打印请求: token {session.token[:8]}..., copies={print_request.copies}, sides={print_request.sides}, color_mode={print_request.color_mode}")
+        logger.info(f"打印请求: token {session.token[:8]}..., copies={print_request.copies}, sides={print_request.sides}, color_mode={print_request.color_mode}, media={print_request.media}, quality={print_request.print_quality}, orientation={print_request.orientation}")
 
         # 1. 验证参数
         if print_request.copies < 1 or print_request.copies > 99:
@@ -281,6 +305,10 @@ def create_routes(app: FastAPI) -> None:
             raise HTTPException(status_code=400, detail={"error": "单双面设置必须是 'one-sided' 或 'two-sided'"})
         if print_request.color_mode not in ["monochrome", "color"]:
             raise HTTPException(status_code=400, detail={"error": "色彩模式必须是 'monochrome' 或 'color'"})
+        if print_request.print_quality not in ["draft", "normal", "high"]:
+            raise HTTPException(status_code=400, detail={"error": "打印质量必须是 'draft', 'normal' 或 'high'"})
+        if print_request.orientation not in ["portrait", "landscape"]:
+            raise HTTPException(status_code=400, detail={"error": "打印方向必须是 'portrait' 或 'landscape'"})
 
         # 2. 按需生成合并PDF（仅在打印时合并）
         pdf_bytes = get_merged_pdf(session)
@@ -298,6 +326,10 @@ def create_routes(app: FastAPI) -> None:
         # 5. 映射 IPP 标准属性关键字
         ipp_sides = "two-sided-long-edge" if print_request.sides == "two-sided" else "one-sided"
         ipp_color = "monochrome" if print_request.color_mode == "monochrome" else "color"
+        # 使用配置中的默认值或请求中的值
+        ipp_media = print_request.media or config.IPP_DEFAULT_MEDIA
+        ipp_quality = print_request.print_quality or config.IPP_DEFAULT_QUALITY
+        ipp_orientation = print_request.orientation or config.IPP_DEFAULT_ORIENTATION
 
         # 6. 构建 IPP 协议 Payload
         ipp_payload = build_ipp_print_request(
@@ -305,7 +337,10 @@ def create_routes(app: FastAPI) -> None:
             pdf_bytes=pdf_bytes,
             copies=print_request.copies,
             sides=ipp_sides,
-            color_mode=ipp_color
+            color_mode=ipp_color,
+            media=ipp_media,
+            print_quality=ipp_quality,
+            orientation=ipp_orientation
         )
 
         try:

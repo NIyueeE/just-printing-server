@@ -135,7 +135,7 @@
                     </div>
 
                     <!-- 色彩模式 -->
-                    <div class="mb-2">
+                    <div class="mb-4">
                         <label class="block mb-3 font-medium px-2" style="color: var(--fg1);">🎨 色彩模式</label>
                         <div class="flex space-x-3">
                             <button id="color-bw" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
@@ -144,6 +144,43 @@
                             <button id="color-color" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
                                 onmouseover="this.style.background='var(--bg2)'"
                                 onmouseout="this.style.background='var(--bg-elevated)'">🌈 彩色</button>
+                        </div>
+                    </div>
+
+                    <!-- 纸张尺寸 -->
+                    <div class="mb-4 p-5 transition-smooth card-hover" style="background: var(--bg-elevated); border-radius: 8px; border: 1px solid var(--border);">
+                        <label class="block mb-3 font-medium" style="color: var(--fg1);">📄 纸张尺寸</label>
+                        <select id="media-select" class="w-full py-3 px-4 text-base font-medium" style="background: var(--bg-base); border: 2px solid var(--border); border-radius: 6px; color: var(--fg0);">
+                            <option value="iso-a4">A4 (iso-a4)</option>
+                        </select>
+                    </div>
+
+                    <!-- 打印质量 -->
+                    <div class="mb-4">
+                        <label class="block mb-3 font-medium px-2" style="color: var(--fg1);">✨ 打印质量</label>
+                        <div class="flex space-x-3">
+                            <button id="quality-draft" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
+                                onmouseover="if(!this.disabled){this.style.background='var(--bg2)'}"
+                                onmouseout="this.style.background='var(--bg-elevated)'">📝 草稿</button>
+                            <button id="quality-normal" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
+                                onmouseover="if(!this.disabled){this.style.background='var(--accent-hover)'}"
+                                onmouseout="this.style.background='var(--accent)'">📄 标准</button>
+                            <button id="quality-high" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
+                                onmouseover="if(!this.disabled){this.style.background='var(--bg2)'}"
+                                onmouseout="this.style.background='var(--bg-elevated)'">💎 高质量</button>
+                        </div>
+                    </div>
+
+                    <!-- 打印方向 -->
+                    <div class="mb-2">
+                        <label class="block mb-3 font-medium px-2" style="color: var(--fg1);">🔄 打印方向</label>
+                        <div class="flex space-x-3">
+                            <button id="orientation-portrait" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
+                                onmouseover="if(!this.disabled){this.style.background='var(--accent-hover)'}"
+                                onmouseout="this.style.background='var(--accent)'">↕ 纵向</button>
+                            <button id="orientation-landscape" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
+                                onmouseover="if(!this.disabled){this.style.background='var(--bg2)'}"
+                                onmouseout="this.style.background='var(--bg-elevated)'">↔ 横向</button>
                         </div>
                     </div>
                 </div>

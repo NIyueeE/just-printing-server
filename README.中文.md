@@ -65,6 +65,7 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 3001
 | POST | `/upload` | 上传文件（图片/PDF） |
 | GET | `/preview.pdf` | 预览合并后的 PDF |
 | GET | `/printer/status` | 查询打印机状态 |
+| GET | `/printer/capabilities` | 获取打印机能力（支持的打印选项） |
 | POST | `/print` | 提交打印任务 |
 | POST | `/cancel` | 取消会话 |
 
@@ -78,6 +79,17 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 3001
 | `MAX_UPLOAD_MB` | 50 | 最大上传大小（MB） |
 | `RATE_LIMIT_PER_IP` | 5/minute | 每 IP 限流频率 |
 | `LOG_LEVEL` | INFO | 日志级别 |
+| `IPP_DEFAULT_MEDIA` | iso-a4 | 默认纸张尺寸 |
+| `IPP_DEFAULT_QUALITY` | normal | 默认打印质量 |
+| `IPP_DEFAULT_ORIENTATION` | portrait | 默认打印方向 |
+| `IPP_USER_NAME` | fastapi | 打印任务用户名 |
+
+## 打印机能力检测
+
+`/printer/capabilities` 接口会自动检测打印机支持的打印选项。在 Web 界面中：
+- 支持的选项显示为可点击的按钮
+- 不支持的选项显示为灰色并禁用
+- 用户可以清楚了解其打印机支持哪些设置
 
 ## 技术栈
 

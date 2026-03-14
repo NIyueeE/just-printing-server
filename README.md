@@ -65,6 +65,7 @@ Open `http://localhost:3001` in your browser.
 | POST | `/upload` | Upload files (images/PDFs) |
 | GET | `/preview.pdf` | Preview merged PDF |
 | GET | `/printer/status` | Check printer status |
+| GET | `/printer/capabilities` | Get printer capabilities (supported print options) |
 | POST | `/print` | Submit print job |
 | POST | `/cancel` | Cancel session |
 
@@ -78,6 +79,17 @@ Open `http://localhost:3001` in your browser.
 | `MAX_UPLOAD_MB` | 50 | Maximum upload size (MB) |
 | `RATE_LIMIT_PER_IP` | 5/minute | Rate limit per IP |
 | `LOG_LEVEL` | INFO | Logging level |
+| `IPP_DEFAULT_MEDIA` | iso-a4 | Default paper size |
+| `IPP_DEFAULT_QUALITY` | normal | Default print quality |
+| `IPP_DEFAULT_ORIENTATION` | portrait | Default print orientation |
+| `IPP_USER_NAME` | fastapi | Username for print jobs |
+
+## Printer Capabilities Detection
+
+The `/printer/capabilities` endpoint automatically detects what printing options your printer supports. In the web UI:
+- Supported options are displayed as clickable buttons
+- Unsupported options appear grayed out and are disabled
+- This allows users to know which settings are available on their specific printer
 
 ## Tech Stack
 

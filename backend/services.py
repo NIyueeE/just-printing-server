@@ -318,10 +318,22 @@ def get_pdf_page_count(pdf_bytes: bytes) -> int:
 # 4. 打印服务
 # ============================================================================
 
-def build_ipp_print_request(printer_uri: str, pdf_bytes: bytes, copies: int, sides: str, color_mode: str) -> bytes:
+def build_ipp_print_request(printer_uri: str, pdf_bytes: bytes, copies: int, sides: str,
+                            color_mode: str, media: str = "iso-a4",
+                            print_quality: str = "normal", orientation: str = "portrait") -> bytes:
     """
     手动构建标准的 IPP Print-Job 协议二进制 Payload
     完全避免第三方库对打印属性支持不全的问题
+
+    参数:
+        printer_uri: 打印机 URI
+        pdf_bytes: PDF 文档字节数据
+        copies: 打印份数
+        sides: 单双面设置 (one-sided, two-sided-long-edge, two-sided-short-edge)
+        color_mode: 色彩模式 (monochrome, color)
+        media: 纸张尺寸 (iso-a4, iso-a3, letter, etc.)
+        print_quality: 打印质量 (draft, normal, high)
+        orientation: 打印方向 (portrait, landscape)
     """
 
     # ============================================================================
@@ -368,8 +380,11 @@ def build_ipp_print_request(printer_uri: str, pdf_bytes: bytes, copies: int, sid
     req.extend(struct.pack('>H', len(printer_uri)))
     req.extend(printer_uri.encode('utf-8'))
 
-    # requesting-user-name = fastapi
-    req.extend(b'\x42\x00\x14requesting-user-name\x00\x07fastapi')
+    # requesting-user-name = fastapi (使用配置中的用户名)
+    user_name = config.IPP_USER_NAME or "fastapi"
+    req.extend(b'\x42\x00\x14requesting-user-name')
+    req.extend(struct.pack('>H', len(user_name)))
+    req.extend(user_name.encode('utf-8'))
 
     # document-format = application/pdf
     req.extend(b'\x49\x00\x0fdocument-format\x00\x0fapplication/pdf')
@@ -390,6 +405,28 @@ def build_ipp_print_request(printer_uri: str, pdf_bytes: bytes, copies: int, sid
     req.extend(b'\x44\x00\x10print-color-mode')
     req.extend(struct.pack('>H', len(color_mode)))
     req.extend(color_mode.encode('utf-8'))
+
+    # media (keyword) - 纸张尺寸
+    req.extend(b'\x44\x00\x05media')
+    req.extend(struct.pack('>H', len(media)))
+    req.extend(media.encode('utf-8'))
+
+    # print-quality (keyword) - 打印质量
+    req.extend(b'\x44\x00\x0dprint-quality')
+    req.extend(struct.pack('>H', len(print_quality)))
+    req.extend(print_quality.encode('utf-8'))
+
+    # orientation-requested (enum) - 打印方向
+    # 3 = portrait, 4 = landscape, 5 = reverse-landscape, 6 = reverse-portrait
+    orientation_map = {
+        "portrait": 3,
+        "landscape": 4,
+        "reverse-landscape": 5,
+        "reverse-portrait": 6
+    }
+    orientation_value = orientation_map.get(orientation, 3)
+    req.extend(b'\x22\x00\x15orientation-requested\x00\x04')
+    req.extend(struct.pack('>I', orientation_value))
 
     # 3. End of Attributes (0x03)
     req.append(IPP_GROUP_END)
@@ -427,3 +464,85 @@ async def get_printer_status(token: str) -> dict:
     except Exception as e:
         logger.warning(f"打印机连接失败: {config.PRINTER_NAME} ({config.PRINTER_IPP_URL}) - {str(e)}")
         return {"status": "offline", "error": f"打印机连接失败: {str(e)}"}
+
+
+async def get_printer_capabilities(token: str) -> dict:
+    """
+    获取IPP打印机能力（支持的打印选项）
+
+    返回:
+    - 成功: {
+        "media": ["iso-a4", "iso-a3", "letter", ...],
+        "sides": ["one-sided", "two-sided-long-edge", "two-sided-short-edge"],
+        "color_mode": ["monochrome", "color"],
+        "print_quality": ["draft", "normal", "high"],
+        "orientation": ["portrait", "landscape"]
+      }
+    - 离线: {"status": "offline", "error": "错误详情"}
+    """
+    logger.info(f"获取打印机能力: token {token[:8]}...")
+
+    # 检查打印机URL是否配置
+    if not config.PRINTER_IPP_URL:
+        logger.error("打印机未配置: PRINTER_IPP_URL 环境变量为空")
+        return {"status": "offline", "error": "打印机未配置"}
+
+    # 默认能力列表（打印机不支持时使用）
+    default_capabilities = {
+        "media": ["iso-a4"],
+        "sides": ["one-sided"],
+        "color_mode": ["monochrome"],
+        "print_quality": ["normal"],
+        "orientation": ["portrait"]
+    }
+
+    try:
+        # 使用 pyipp 库获取打印机能力
+        async with IPP(config.PRINTER_IPP_URL) as ipp:
+            printer = await ipp.printer()
+
+            capabilities = {
+                "media": [],
+                "sides": [],
+                "color_mode": [],
+                "print_quality": [],
+                "orientation": []
+            }
+
+            # 获取支持的 media (纸张尺寸)
+            if hasattr(printer, 'media_supported') and printer.media_supported:
+                capabilities["media"] = list(printer.media_supported)
+            else:
+                capabilities["media"] = default_capabilities["media"]
+
+            # 获取支持的 sides (单双面)
+            if hasattr(printer, 'sides_supported') and printer.sides_supported:
+                capabilities["sides"] = list(printer.sides_supported)
+            else:
+                capabilities["sides"] = default_capabilities["sides"]
+
+            # 获取支持的 print-color-mode (色彩模式)
+            if hasattr(printer, 'color_modes_supported') and printer.color_modes_supported:
+                capabilities["color_mode"] = list(printer.color_modes_supported)
+            else:
+                capabilities["color_mode"] = default_capabilities["color_mode"]
+
+            # 获取支持的 print-quality (打印质量)
+            if hasattr(printer, 'print_quality_supported') and printer.print_quality_supported:
+                capabilities["print_quality"] = list(printer.print_quality_supported)
+            else:
+                capabilities["print_quality"] = default_capabilities["print_quality"]
+
+            # orientation-requested 通常不是打印机属性，使用默认值
+            capabilities["orientation"] = default_capabilities["orientation"]
+
+            logger.info(f"成功获取打印机能力: {config.PRINTER_NAME}")
+            return capabilities
+
+    except asyncio.TimeoutError:
+        logger.warning(f"获取打印机能力超时: {config.PRINTER_NAME} ({config.PRINTER_IPP_URL})")
+        return {"status": "offline", "error": "连接打印机超时（5秒）"}
+    except Exception as e:
+        logger.warning(f"获取打印机能力失败: {config.PRINTER_NAME} ({config.PRINTER_IPP_URL}) - {str(e)}")
+        # 失败时返回默认能力
+        return default_capabilities
