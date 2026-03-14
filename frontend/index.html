@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=0.1.6">
 </head>
 <body class="min-h-screen">
     <!-- 认证遮罩（初始显示） -->
@@ -36,11 +36,7 @@
                        style="background: var(--bg-base); border: 2px solid var(--border); border-radius: 8px; color: var(--fg0); transition: all 0.3s ease;"
                        placeholder="请输入PIN码" autofocus>
             </div>
-            <button id="login-btn"
-                    class="w-full font-bold py-4 transition-smooth"
-                    style="background: var(--accent); color: #fbf1c7; border-radius: 8px;"
-                    onmouseover="this.style.background='var(--accent-hover)'"
-                    onmouseout="this.style.background='var(--accent)'">
+            <button id="login-btn" class="btn btn-primary w-full py-4">
                 <span class="text-lg">登 录</span>
             </button>
             <div id="auth-error" class="mt-4 text-center hidden" style="color: var(--error); font-size: 14px;"></div>
@@ -58,14 +54,14 @@
                 <h1 class="text-xl font-bold" style="color: var(--fg0);">Just-Printing</h1>
             </div>
             <div class="flex items-center space-x-3">
-                <a href="https://github.com/NIyueeE/just-printing-server" target="_blank" class="px-4 py-2.5 transition-smooth flex items-center space-x-2" style="color: var(--fg1); border-radius: 6px;" onmouseover="this.style.background='rgba(10, 125, 140, 0.1)'" onmouseout="this.style.background='transparent'">
+                <a href="https://github.com/NIyueeE/just-printing-server" target="_blank" class="link-btn px-4 py-2.5 flex items-center space-x-2" style="color: var(--fg1); border-radius: 6px;">
                     <span class="text-xl">🐙</span>
                     <span class="font-medium hidden sm:inline">GitHub</span>
                 </a>
-                <button id="logout-btn" class="px-5 py-2.5 transition-smooth font-medium flex items-center space-x-2" style="color: var(--accent); border-radius: 6px;" onmouseover="this.style.background='rgba(10, 125, 140, 0.1)'" onmouseout="this.style.background='transparent'">
+                <a href="javascript:void(0)" id="logout-btn" class="link-btn px-5 py-2.5 font-medium flex items-center space-x-2" style="color: var(--accent); border-radius: 6px;">
                     <span>🚪</span>
                     <span>Quit</span>
-                </button>
+                </a>
             </div>
         </header>
 
@@ -76,14 +72,12 @@
                 <!-- 上传区域 -->
                 <div>
                     <div id="upload-area"
-                         class="p-10 text-center cursor-pointer transition-smooth card-hover"
-                         style="border: 3px dashed var(--border); border-radius: 8px; background: var(--bg-elevated);"
-                         onmouseover="this.style.borderColor='var(--accent)';this.style.transform='scale(1.02)'"
-                         onmouseout="this.style.borderColor='var(--border)';this.style.transform='scale(1)'">
+                         class="p-10 text-center cursor-pointer card-hover"
+                         style="border: 3px dashed var(--border); border-radius: 8px; background: var(--bg-elevated);">
                         <div class="text-6xl mb-4" style="animation: float 3s ease-in-out infinite;">📤</div>
                         <p class="text-lg font-medium mb-2" style="color: var(--fg0);">点击选择文件或拖拽至此</p>
-                        <p class="text-sm" style="color: var(--text-muted);">支持 JPG / PNG / PDF 文件</p>
-                        <input type="file" id="file-input" class="hidden">
+                        <p id="supported-formats" class="text-sm" style="color: var(--text-muted);">支持 JPG / PNG / PDF 文件</p>
+                        <input type="file" id="file-input" class="hidden" accept="">
                     </div>
                 </div>
 
@@ -110,12 +104,10 @@
                     <div class="w-48 p-5 transition-smooth card-hover" style="background: var(--bg-elevated); border-radius: 8px; border: 1px solid var(--border);">
                         <label class="block mb-3 font-medium" style="color: var(--fg1);">📋 份数</label>
                         <div class="flex items-center space-x-2">
-                            <button id="copies-decrement" class="w-10 h-10 transition-smooth font-bold btn-hover-lift" style="background: var(--bg2); border-radius: 6px; color: var(--fg0);"
-                                onmouseover="this.style.background='var(--accent)';this.style.color='#fbf1c7'" onmouseout="this.style.background='var(--bg2)';this.style.color='var(--fg0)'">−</button>
+                            <button id="copies-decrement" class="btn btn-secondary btn-icon w-10 h-10 font-bold">−</button>
                             <input id="copies-input" type="text" value="1"
                                    class="text-center w-14 py-3 text-lg font-bold" style="background: var(--bg-muted); border: none; border-radius: 6px; color: var(--fg0);" readonly>
-                            <button id="copies-increment" class="w-10 h-10 transition-smooth font-bold btn-hover-lift" style="background: var(--bg2); border-radius: 6px; color: var(--fg0);"
-                                onmouseover="this.style.background='var(--accent)';this.style.color='#fbf1c7'" onmouseout="this.style.background='var(--bg2)';this.style.color='var(--fg0)'">+</button>
+                            <button id="copies-increment" class="btn btn-secondary btn-icon w-10 h-10 font-bold">+</button>
                         </div>
                     </div>
                 </div>
@@ -128,12 +120,8 @@
                     <div class="mb-4">
                         <label class="block mb-3 font-medium px-2" style="color: var(--fg1);">📑 单双面</label>
                         <div class="flex space-x-3">
-                            <button id="sides-one" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
-                                onmouseover="this.style.background='var(--accent-hover)'"
-                                onmouseout="this.style.background='var(--accent)'">📄 单面</button>
-                            <button id="sides-two" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
-                                onmouseover="this.style.background='var(--bg2)'"
-                                onmouseout="this.style.background='var(--bg-elevated)'">📖 双面</button>
+                            <button id="sides-one" class="btn btn-primary flex-1 py-3.5 px-6">📄 单面</button>
+                            <button id="sides-two" class="btn btn-secondary flex-1 py-3.5 px-6">📖 双面</button>
                         </div>
                     </div>
 
@@ -141,12 +129,8 @@
                     <div class="mb-4">
                         <label class="block mb-3 font-medium px-2" style="color: var(--fg1);">🎨 色彩模式</label>
                         <div class="flex space-x-3">
-                            <button id="color-bw" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
-                                onmouseover="this.style.background='var(--accent-hover)'"
-                                onmouseout="this.style.background='var(--accent)'">⚫ 黑白</button>
-                            <button id="color-color" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
-                                onmouseover="this.style.background='var(--bg2)'"
-                                onmouseout="this.style.background='var(--bg-elevated)'">🌈 彩色</button>
+                            <button id="color-bw" class="btn btn-primary flex-1 py-3.5 px-6">⚫ 黑白</button>
+                            <button id="color-color" class="btn btn-secondary flex-1 py-3.5 px-6">🌈 彩色</button>
                         </div>
                     </div>
 
@@ -173,15 +157,9 @@
                     <div class="mb-4">
                         <label class="block mb-3 font-medium px-2" style="color: var(--fg1);">✨ 打印质量</label>
                         <div class="flex space-x-3">
-                            <button id="quality-draft" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
-                                onmouseover="if(!this.disabled){this.style.background='var(--bg2)'}"
-                                onmouseout="this.style.background='var(--bg-elevated)'">📝 草稿</button>
-                            <button id="quality-normal" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
-                                onmouseover="if(!this.disabled){this.style.background='var(--accent-hover)'}"
-                                onmouseout="this.style.background='var(--accent)'">📄 标准</button>
-                            <button id="quality-high" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
-                                onmouseover="if(!this.disabled){this.style.background='var(--bg2)'}"
-                                onmouseout="this.style.background='var(--bg-elevated)'">💎 高质量</button>
+                            <button id="quality-draft" class="btn btn-secondary flex-1 py-3.5 px-6">📝 草稿</button>
+                            <button id="quality-normal" class="btn btn-primary flex-1 py-3.5 px-6">📄 标准</button>
+                            <button id="quality-high" class="btn btn-secondary flex-1 py-3.5 px-6">💎 高质量</button>
                         </div>
                     </div>
 
@@ -189,12 +167,8 @@
                     <div class="mb-2">
                         <label class="block mb-3 font-medium px-2" style="color: var(--fg1);">🔄 打印方向</label>
                         <div class="flex space-x-3">
-                            <button id="orientation-portrait" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
-                                onmouseover="if(!this.disabled){this.style.background='var(--accent-hover)'}"
-                                onmouseout="this.style.background='var(--accent)'">↕ 纵向</button>
-                            <button id="orientation-landscape" class="px-6 py-3.5 flex-1 transition-smooth font-medium" style="background: var(--bg-elevated); color: var(--fg0); border-radius: 6px; border: 1px solid var(--border);"
-                                onmouseover="if(!this.disabled){this.style.background='var(--bg2)'}"
-                                onmouseout="this.style.background='var(--bg-elevated)'">↔ 横向</button>
+                            <button id="orientation-portrait" class="btn btn-primary flex-1 py-3.5 px-6">↕ 纵向</button>
+                            <button id="orientation-landscape" class="btn btn-secondary flex-1 py-3.5 px-6">↔ 横向</button>
                         </div>
                     </div>
                 </div>
@@ -215,9 +189,7 @@
                         <div class="text-center p-10" style="background: var(--bg-muted); border-radius: 6px;">
                             <div class="text-6xl mb-5" style="animation: float 3s ease-in-out infinite;">📄</div>
                             <p id="preview-info" class="mb-6 font-medium text-lg" style="color: var(--fg1);">PDF已生成（共 0 页）</p>
-                            <button id="preview-fullscreen" class="px-10 py-4 font-bold transition-smooth" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
-                                onmouseover="this.style.background='var(--accent-hover)'"
-                                onmouseout="this.style.background='var(--accent)'">
+                            <button id="preview-fullscreen" class="btn btn-primary px-10 py-4">
                                 🔍 点击全屏预览
                             </button>
                         </div>
@@ -233,25 +205,18 @@
 
         <!-- 底部操作栏（移动端固定） -->
         <div id="mobile-action-bar" class="fixed bottom-0 left-0 right-0 px-5 py-4 flex justify-between md:hidden transition-smooth" style="background: var(--bg-elevated); border-top: 1px solid var(--border);">
-            <button id="cancel-btn" class="px-8 py-4 transition-smooth font-medium flex items-center space-x-2" style="background: var(--bg-base); border-radius: 6px; color: var(--fg1); border: 1px solid var(--border);"
-                onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='var(--bg-base)'">
+            <button id="cancel-btn" class="btn btn-cancel py-4 px-8">
                 <span>❌</span><span>取消</span></button>
-            <button id="print-btn" class="px-10 py-4 font-bold transition-smooth flex items-center space-x-2" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
-                onmouseover="this.style.background='var(--accent-hover)'"
-                onmouseout="this.style.background='var(--accent)'">
+            <button id="print-btn" class="btn btn-primary py-4 px-10">
                 <span>🖨️</span><span>打印</span></button>
         </div>
 
         <!-- 桌面端操作栏 -->
         <div class="mt-10 pb-10 px-4 hidden md:block">
             <div class="flex justify-center space-x-8">
-                <button id="cancel-btn-desktop" class="px-12 py-5 transition-smooth font-medium flex items-center space-x-2" style="background: var(--bg-base); border-radius: 6px; color: var(--fg1); border: 1px solid var(--border);"
-                    onmouseover="this.style.background='var(--bg2)'"
-                    onmouseout="this.style.background='var(--bg-base)'">
+                <button id="cancel-btn-desktop" class="btn btn-cancel py-5 px-12">
                     <span>❌</span><span>取消</span></button>
-                <button id="print-btn-desktop" class="px-12 py-5 font-bold transition-smooth flex items-center space-x-2" style="background: var(--accent); color: #fbf1c7; border-radius: 6px;"
-                    onmouseover="this.style.background='var(--accent-hover)'"
-                    onmouseout="this.style.background='var(--accent)'">
+                <button id="print-btn-desktop" class="btn btn-primary py-5 px-12">
                     <span>🖨️</span><span>打印</span></button>
             </div>
         </div>
@@ -277,6 +242,6 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="app.js"></script>
+    <script src="app.js?v=0.1.6"></script>
 </body>
 </html>

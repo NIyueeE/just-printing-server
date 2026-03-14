@@ -21,6 +21,7 @@ Connect your home printer directly to your network. Just-Printing-Server works w
 - **Brother printers** (e.g., Brother HL, MFC series)
 - **Canon printers** (e.g., Canon PIXMA, imageRUNNER)
 - **EPSON printers** (e.g., EPSON WorkForce, EcoTank)
+- **Lenovo printers** (e.g., Lenovo LJ4000D, LJ2600D)
 
 No need to install printer drivers or apps on your phone/laptop.
 
@@ -109,6 +110,7 @@ The web interface provides:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `REGISTRY` | docker.io | Docker registry for base image (used in compose) |
 | `FRONTEND_PATH` | frontend | Frontend static files path |
 | `PRINTER_IPP_URL` | - | IPP URL of your printer |
 | `PRINTER_NAME` | - | Printer display name |

@@ -18,6 +18,26 @@
             isMobile: window.innerWidth < 768
         };
 
+        // DOM 元素缓存
+        const elements = {};
+
+        function initElements() {
+            elements.copiesInput = document.getElementById('copies-input');
+            elements.copiesDecrement = document.getElementById('copies-decrement');
+            elements.copiesIncrement = document.getElementById('copies-increment');
+            elements.sidesOne = document.getElementById('sides-one');
+            elements.sidesTwo = document.getElementById('sides-two');
+            elements.colorBw = document.getElementById('color-bw');
+            elements.colorColor = document.getElementById('color-color');
+            elements.mediaSelect = document.getElementById('media-select');
+            elements.resolutionSelect = document.getElementById('resolution-select');
+            elements.qualityDraft = document.getElementById('quality-draft');
+            elements.qualityNormal = document.getElementById('quality-normal');
+            elements.qualityHigh = document.getElementById('quality-high');
+            elements.orientationPortrait = document.getElementById('orientation-portrait');
+            elements.orientationLandscape = document.getElementById('orientation-landscape');
+        }
+
         // ==================== 工具函数 ====================
 
         // Toast通知系统
@@ -35,7 +55,7 @@
             toast.innerHTML = `
                 <span class="flex items-center justify-center w-6 h-6 mr-3 text-sm font-bold" style="background: ${style.bg}; border-radius: 50%; color: ${style.border};">${style.icon}</span>
                 <span class="flex-1 font-medium">${message}</span>
-                <button class="ml-4 p-1 transition" style="color: var(--text-muted); border-radius: 6px;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='transparent'">✕</button>
+                <button class="toast-close-btn ml-4 p-1" style="color: var(--text-muted); border-radius: 6px;">✕</button>
             `;
             container.appendChild(toast);
 
@@ -141,6 +161,109 @@
             if (isMobileNow !== state.isMobile) {
                 state.isMobile = isMobileNow;
                 updatePreviewVisibility();
+            }
+        }
+
+        // ==================== 打印按钮和文件类型动态更新 ====================
+
+        // 统一设置按钮禁用状态（样式由CSS处理）
+        function setButtonDisabled(button, disabled, titleText = '') {
+            if (!button) return;
+            button.disabled = disabled;
+            button.title = disabled ? (titleText || '请先上传文件') : '';
+        }
+
+        // 更新打印按钮状态（根据是否有文件）
+        function updatePrintButtonState() {
+            const printButtons = ['print-btn', 'print-btn-desktop'];
+            const hasFiles = state.uploadedFiles.length > 0 &&
+                            state.uploadedFiles.some(f => f.status === 'success');
+
+            printButtons.forEach(id => {
+                const btn = document.getElementById(id);
+                setButtonDisabled(btn, !hasFiles, '请先上传文件');
+            });
+        }
+
+        // 更新支持的文档格式显示（与后端同步）
+        function updateSupportedFormatsDisplay() {
+            const formatsEl = document.getElementById('supported-formats');
+            const fileInput = document.getElementById('file-input');
+            const formats = state.supportedDocumentFormats;
+
+            // 我们关心的四种格式（用于显示）
+            const supportedTypes = ['text/plain', 'image/gif', 'image/jpeg', 'image/png', 'application/pdf'];
+            const displayMap = {
+                'text/plain': 'TXT',
+                'image/gif': 'GIF',
+                'image/jpeg': 'JPG/JPEG',
+                'image/png': 'PNG',
+                'application/pdf': 'PDF'
+            };
+
+            // MIME 类型到文件扩展名的完整映射
+            const mimeToExt = {
+                'application/pdf': '.pdf',
+                'application/postscript': '.ps',
+                'application/vnd.cups-pdf': '.pdf',
+                'application/vnd.cups-postscript': '.ps',
+                'application/vnd.cups-raster': '.ras',
+                'application/vnd.cups-raw': '.raw',
+                'application/octet-stream': '',
+                'application/vnd.adobe-reader-postscript': '.pdf',
+                'application/vnd.cups-pdf-banner': '.pdf',
+                'image/gif': '.gif',
+                'image/jpeg': '.jpg,.jpeg',
+                'image/png': '.png',
+                'image/tiff': '.tiff,.tif',
+                'image/pwg-raster': '.pwg',
+                'image/urf': '.urf',
+                'image/x-bitmap': '.xbm',
+                'image/x-photocd': '.pcd',
+                'image/x-portable-anymap': '.pnm',
+                'image/x-portable-bitmap': '.pbm',
+                'image/x-portable-graymap': '.pgm',
+                'image/x-portable-pixmap': '.ppm',
+                'image/x-sgi-rgb': '.rgb,.sgi',
+                'image/x-sun-raster': '.ras',
+                'image/x-xbitmap': '.xbm',
+                'image/x-xpixmap': '.xpm',
+                'image/x-xwindowdump': '.xwd',
+                'text/css': '.css',
+                'text/html': '.html,.htm',
+                'text/plain': '.txt',
+                'application/x-cshell': '.csh',
+                'application/x-csource': '.c',
+                'application/x-perl': '.pl',
+                'application/x-shell': '.sh'
+            };
+
+            // 如果还没有获取到能力，使用默认值
+            if (!formats || formats.length === 0) {
+                if (formatsEl) formatsEl.textContent = '支持 PDF 文件';
+                if (fileInput) fileInput.accept = '.pdf';
+                return;
+            }
+
+            // 过滤出支持的格式（仅显示 TXT/GIF/JPG/PNG/PDF）
+            const supportedFormats = formats.filter(mime => supportedTypes.includes(mime));
+            const displayNames = supportedFormats.map(mime => displayMap[mime]);
+
+            // 更新显示文本（只显示支持的格式）
+            if (formatsEl) {
+                if (displayNames.length > 0) {
+                    formatsEl.textContent = '支持 ' + displayNames.join(' ') + ' 文件';
+                } else {
+                    formatsEl.textContent = '暂不支持常见图片格式';
+                }
+            }
+
+            // 更新文件选择器的 accept 属性（使用完整的后端返回列表）
+            if (fileInput) {
+                const extensions = formats.map(mime => {
+                    return mimeToExt[mime] || '';
+                }).filter(Boolean).join(',');
+                fileInput.accept = extensions || '.jpg,.jpeg,.png,.pdf';
             }
         }
 
@@ -348,6 +471,8 @@
 
                                 // 刷新预览
                                 updatePreview();
+                                // 更新打印按钮状态
+                                updatePrintButtonState();
                                 resolve(response);
                             } catch (error) {
                                 fileItem.status = 'error';
@@ -420,6 +545,9 @@
             if (state.uploadedFiles.length === 0) {
                 fileList.innerHTML = '<div class="text-center p-10" style="color: var(--text-muted); background: #fff; border-radius: 16px; border: 1px dashed var(--border);"><div class="text-5xl mb-3">📭</div><p class="font-medium">暂无上传文件</p><p class="text-sm mt-1">上传文件后将显示在这里</p></div>';
             }
+
+            // 更新打印按钮状态
+            updatePrintButtonState();
         }
 
         function createFileItemHTML(fileItem) {
@@ -460,9 +588,7 @@
             const fileIcon = fileExt === 'pdf' ? '📕' : (fileExt === 'jpg' || fileExt === 'jpeg' ? '🖼️' : (fileExt === 'png' ? '🖼️' : '📄'));
 
             return `
-                <div class="flex items-center p-4 card-hover" style="background: #fff; border-left: 4px solid ${borderColor}; border-radius: 14px; transition: all 0.3s ease;"
-                     onmouseover="this.style.borderLeftColor='var(--accent)';this.style.boxShadow='0 4px 16px rgba(10, 125, 140, 0.15)';this.style.transform='translateX(4px)'"
-                     onmouseout="this.style.borderLeftColor='${borderColor}' ;this.style.boxShadow='none';this.style.transform='translateX(0)'">
+                <div class="file-item flex items-center p-4" style="background: #fff; border-left: 4px solid ${borderColor}; border-radius: 14px;">
                     <div class="text-3xl mr-4">${fileIcon}</div>
                     <div class="flex-1 min-w-0">
                         <div class="font-semibold truncate" style="color: var(--fg0);">${fileItem.name}</div>
@@ -519,24 +645,102 @@
 
         // ==================== 打印设置UI交互 ====================
 
+        // 按钮样式更新函数（全局）- 包含打印机能力检查
+        function updateSidesButtons() {
+            const { sidesOne, sidesTwo } = elements;
+
+            // 双面按钮始终不禁用（部分打印机虽不支持双面，但驱动会自动处理）
+            sidesTwo.disabled = false;
+            sidesTwo.title = '';
+
+            // 始终启用单面
+            sidesOne.disabled = false;
+            sidesOne.title = '';
+
+            // 设置选中状态 - 使用 class 切换
+            sidesOne.classList.toggle('active', state.printSettings.sides === 'one-sided');
+            sidesTwo.classList.toggle('active', state.printSettings.sides === 'two-sided');
+        }
+
+        function updateColorButtons() {
+            const { colorBw, colorColor } = elements;
+            const caps = state.capabilities;
+
+            // 检查打印机能力（如果能力未加载，则默认启用所有按钮）
+            const supportsMonochrome = caps?.color_mode?.includes('monochrome');
+            const supportsColor = caps?.color_mode?.includes('color');
+
+            // 设置禁用状态 - CSS 处理样式
+            colorBw.disabled = caps && supportsMonochrome === false;
+            colorBw.title = colorBw.disabled ? '当前打印机不支持此选项' : '';
+
+            colorColor.disabled = caps && supportsColor === false;
+            colorColor.title = colorColor.disabled ? '当前打印机不支持此选项' : '';
+
+            // 设置选中状态 - 使用 class 切换
+            colorBw.classList.toggle('active', state.printSettings.color_mode === 'monochrome');
+            colorColor.classList.toggle('active', state.printSettings.color_mode === 'color');
+        }
+
+        function updateQualityButtons() {
+            const { qualityDraft, qualityNormal, qualityHigh } = elements;
+            const caps = state.capabilities;
+            const buttons = {
+                'draft': qualityDraft,
+                'normal': qualityNormal,
+                'high': qualityHigh
+            };
+            const activeQuality = state.printSettings.print_quality;
+
+            // 检查打印机能力（如果能力未加载，则默认启用所有按钮）
+            const supportsDraft = caps?.print_quality?.includes('draft');
+            const supportsNormal = caps?.print_quality?.includes('normal');
+            const supportsHigh = caps?.print_quality?.includes('high');
+            const capabilityMap = {
+                'draft': supportsDraft,
+                'normal': supportsNormal,
+                'high': supportsHigh
+            };
+
+            Object.keys(buttons).forEach(quality => {
+                const btn = buttons[quality];
+                const isSupported = capabilityMap[quality];
+
+                // 设置禁用状态 - CSS 处理样式
+                btn.disabled = caps && isSupported === false;
+                btn.title = btn.disabled ? '当前打印机不支持此选项' : '';
+
+                // 设置选中状态 - 使用 class 切换
+                btn.classList.toggle('active', quality === activeQuality);
+            });
+        }
+
+        function updateOrientationButtons() {
+            const { orientationPortrait, orientationLandscape } = elements;
+            const caps = state.capabilities;
+
+            // 检查打印机能力（如果能力未加载，则默认启用所有按钮）
+            const supportsPortrait = caps?.orientation?.includes('portrait');
+            const supportsLandscape = caps?.orientation?.includes('landscape');
+
+            // 设置禁用状态 - CSS 处理样式
+            orientationPortrait.disabled = caps && supportsPortrait === false;
+            orientationPortrait.title = orientationPortrait.disabled ? '当前打印机不支持此选项' : '';
+
+            orientationLandscape.disabled = caps && supportsLandscape === false;
+            orientationLandscape.title = orientationLandscape.disabled ? '当前打印机不支持此选项' : '';
+
+            // 设置选中状态 - 使用 class 切换
+            orientationPortrait.classList.toggle('active', state.printSettings.orientation === 'portrait');
+            orientationLandscape.classList.toggle('active', state.printSettings.orientation === 'landscape');
+        }
+
         function initPrintSettings() {
-            const copiesInput = document.getElementById('copies-input');
-            const copiesDecrement = document.getElementById('copies-decrement');
-            const copiesIncrement = document.getElementById('copies-increment');
-
-            const sidesOne = document.getElementById('sides-one');
-            const sidesTwo = document.getElementById('sides-two');
-
-            const colorBw = document.getElementById('color-bw');
-            const colorColor = document.getElementById('color-color');
-
-            const mediaSelect = document.getElementById('media-select');
-            const resolutionSelect = document.getElementById('resolution-select');
-            const qualityDraft = document.getElementById('quality-draft');
-            const qualityNormal = document.getElementById('quality-normal');
-            const qualityHigh = document.getElementById('quality-high');
-            const orientationPortrait = document.getElementById('orientation-portrait');
-            const orientationLandscape = document.getElementById('orientation-landscape');
+            initElements();
+            const { copiesInput, copiesDecrement, copiesIncrement, sidesOne, sidesTwo,
+                    colorBw, colorColor, mediaSelect, resolutionSelect,
+                    qualityDraft, qualityNormal, qualityHigh,
+                    orientationPortrait, orientationLandscape } = elements;
 
             // 初始化显示
             copiesInput.value = state.printSettings.copies;
@@ -618,68 +822,6 @@
                 state.printSettings.orientation = 'landscape';
                 updateOrientationButtons();
             });
-
-            function updateSidesButtons() {
-                if (state.printSettings.sides === 'one-sided') {
-                    sidesOne.style.background = 'var(--accent)';
-                    sidesOne.style.color = '#fbf1c7';
-                    sidesTwo.style.background = 'var(--bg2)'
-                    sidesTwo.style.color = 'var(--fg0)';
-                } else {
-                    sidesTwo.style.background = 'var(--accent)';
-                    sidesTwo.style.color = '#fbf1c7';
-                    sidesOne.style.background = 'var(--bg2)';
-                    sidesOne.style.color = 'var(--fg0)';
-                }
-            }
-
-            function updateColorButtons() {
-                if (state.printSettings.color_mode === 'monochrome') {
-                    colorBw.style.background = 'var(--accent)';
-                    colorBw.style.color = '#fbf1c7';
-                    colorColor.style.background = 'var(--bg2)';
-                    colorColor.style.color = 'var(--fg0)';
-                } else {
-                    colorColor.style.background = 'var(--accent)';
-                    colorColor.style.color = '#fbf1c7';
-                    colorBw.style.background = 'var(--bg2)';
-                    colorBw.style.color = 'var(--fg0)';
-                }
-            }
-
-            function updateQualityButtons() {
-                const buttons = {
-                    'draft': qualityDraft,
-                    'normal': qualityNormal,
-                    'high': qualityHigh
-                };
-                const activeQuality = state.printSettings.print_quality;
-
-                Object.keys(buttons).forEach(quality => {
-                    const btn = buttons[quality];
-                    if (quality === activeQuality) {
-                        btn.style.background = 'var(--accent)';
-                        btn.style.color = '#fbf1c7';
-                    } else {
-                        btn.style.background = 'var(--bg-elevated)';
-                        btn.style.color = 'var(--fg0)';
-                    }
-                });
-            }
-
-            function updateOrientationButtons() {
-                if (state.printSettings.orientation === 'portrait') {
-                    orientationPortrait.style.background = 'var(--accent)';
-                    orientationPortrait.style.color = '#fbf1c7';
-                    orientationLandscape.style.background = 'var(--bg-elevated)';
-                    orientationLandscape.style.color = 'var(--fg0)';
-                } else {
-                    orientationLandscape.style.background = 'var(--accent)';
-                    orientationLandscape.style.color = '#fbf1c7';
-                    orientationPortrait.style.background = 'var(--bg-elevated)';
-                    orientationPortrait.style.color = 'var(--fg0)';
-                }
-            }
         }
 
         // ==================== 打印机能力获取 ====================
@@ -707,8 +849,12 @@
         }
 
         function updateUIWithCapabilities(caps) {
+            initElements();
+            const { mediaSelect, resolutionSelect, sidesOne, sidesTwo,
+                    colorBw, colorColor, qualityDraft, qualityNormal, qualityHigh,
+                    orientationPortrait, orientationLandscape } = elements;
+
             // 更新纸张尺寸下拉框
-            const mediaSelect = document.getElementById('media-select');
             if (caps.media && Array.isArray(caps.media)) {
                 mediaSelect.innerHTML = '';
                 caps.media.forEach(media => {
@@ -734,7 +880,6 @@
             }
 
             // 更新打印分辨率下拉框
-            const resolutionSelect = document.getElementById('resolution-select');
             if (caps.printer_resolution && Array.isArray(caps.printer_resolution) && caps.printer_resolution.length > 0) {
                 enableSelect(resolutionSelect);
                 resolutionSelect.innerHTML = '';
@@ -764,70 +909,23 @@
             if (caps.document_formats && Array.isArray(caps.document_formats) && caps.document_formats.length > 0) {
                 state.supportedDocumentFormats = caps.document_formats;
             }
+            // 更新支持的文档格式显示
+            updateSupportedFormatsDisplay();
 
-            // 更新单双面按钮（不禁用双面选项，因为有些打印机支持半自动双面打印）
-            const sidesOne = document.getElementById('sides-one');
-            const sidesTwo = document.getElementById('sides-two');
+            // 根据打印机支持设置默认状态
             if (caps.sides && Array.isArray(caps.sides)) {
-                const supportsOneSided = caps.sides.includes('one-sided');
-
-                // 只禁用单面选项（如果不支持的话），不禁用双面（支持半自动双面打印）
-                if (!supportsOneSided) {
-                    disableButton(sidesOne);
-                }
-                // 注意：不禁用 sidesTwo，因为有些打印机可以半自动双面打印
-                // 打印机会吸回纸张但属性仍显示为 one-sided
-            }
-
-            // 更新色彩模式按钮
-            const colorBw = document.getElementById('color-bw');
-            const colorColor = document.getElementById('color-color');
-            if (caps.color_mode && Array.isArray(caps.color_mode)) {
-                const supportsMonochrome = caps.color_mode.includes('monochrome');
-                const supportsColor = caps.color_mode.includes('color');
-
-                if (!supportsMonochrome) {
-                    disableButton(colorBw);
-                }
-                if (!supportsColor) {
-                    disableButton(colorColor);
+                const supportsTwoSided = caps.sides.some(s => s.includes('two-sided'));
+                if (!supportsTwoSided) {
+                    // 打印机不支持双面，默认使用单面
+                    state.printSettings.sides = 'one-sided';
                 }
             }
 
-            // 更新打印质量按钮
-            const qualityDraft = document.getElementById('quality-draft');
-            const qualityNormal = document.getElementById('quality-normal');
-            const qualityHigh = document.getElementById('quality-high');
-            if (caps.print_quality && Array.isArray(caps.print_quality)) {
-                const supportsDraft = caps.print_quality.includes('draft');
-                const supportsNormal = caps.print_quality.includes('normal');
-                const supportsHigh = caps.print_quality.includes('high');
-
-                if (!supportsDraft) {
-                    disableButton(qualityDraft);
-                }
-                if (!supportsNormal) {
-                    disableButton(qualityNormal);
-                }
-                if (!supportsHigh) {
-                    disableButton(qualityHigh);
-                }
-            }
-
-            // 更新打印方向按钮
-            const orientationPortrait = document.getElementById('orientation-portrait');
-            const orientationLandscape = document.getElementById('orientation-landscape');
-            if (caps.orientation && Array.isArray(caps.orientation)) {
-                const supportsPortrait = caps.orientation.includes('portrait');
-                const supportsLandscape = caps.orientation.includes('landscape');
-
-                if (!supportsPortrait) {
-                    disableButton(orientationPortrait);
-                }
-                if (!supportsLandscape) {
-                    disableButton(orientationLandscape);
-                }
-            }
+            // 调用按钮更新函数来更新样式和禁用状态
+            updateSidesButtons();
+            updateColorButtons();
+            updateQualityButtons();
+            updateOrientationButtons();
         }
 
         function disableButton(btn) {
@@ -1028,7 +1126,7 @@
             printBtnDesktop.addEventListener('click', handlePrint);
 
             // 退出按钮
-            document.getElementById('logout-btn').addEventListener('click', handleLogout);
+            document.getElementById('logout-btn').onclick = handleLogout;
         }
 
         async function handlePrint() {
@@ -1174,6 +1272,10 @@
 
             // 初始化打印和取消
             initPrintAndCancel();
+
+            // 初始化打印按钮状态和文件类型显示
+            updatePrintButtonState();
+            updateSupportedFormatsDisplay();
 
             // 初始化打印设置（在认证成功后调用）
             // initPrintSettings() 会在认证成功后调用

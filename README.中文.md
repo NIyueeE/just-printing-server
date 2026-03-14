@@ -21,6 +21,7 @@
 - **Brother 打印机**（如 Brother HL、MFC 系列）
 - **Canon 打印机**（如 Canon PIXMA、imageRUNNER）
 - **EPSON 打印机**（如 EPSON WorkForce、EcoTank）
+- **联想打印机**（如联想 LJ4000D、LJ2600D）
 
 无需在手机或电脑上安装任何打印机驱动或应用。
 
@@ -109,6 +110,7 @@ Web 界面功能：
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
+| `REGISTRY` | docker.io | Docker 镜像仓库（用于 compose） |
 | `FRONTEND_PATH` | frontend | 前端静态文件路径 |
 | `PRINTER_IPP_URL` | - | 打印机的 IPP 地址 |
 | `PRINTER_NAME` | - | 打印机显示名称 |
