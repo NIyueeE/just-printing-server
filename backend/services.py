@@ -27,6 +27,7 @@ from PIL import Image
 import img2pdf
 import PyPDF2
 from pyipp import IPP
+from pyipp.enums import IppOperation
 
 from .config import config
 
@@ -501,9 +502,32 @@ async def get_printer_capabilities(token: str) -> dict:
 
     try:
         # 使用 pyipp 库获取打印机能力
-        async with IPP(config.PRINTER_IPP_URL) as ipp:
-            printer = await ipp.printer()
+        # 需要请求额外的属性（DEFAULT_PRINTER_ATTRIBUTES 不包含能力属性）
+        CAPABILITY_ATTRIBUTES = [
+            "media-supported",
+            "sides-supported",
+            "color-supported",
+            "print-quality-supported",
+            "document-format-supported",
+            "printer-resolution-supported",
+            "printer-name",
+        ]
 
+        async with IPP(config.PRINTER_IPP_URL) as ipp:
+            # 使用自定义属性列表获取打印机能力
+            response_data = await ipp.execute(
+                IppOperation.GET_PRINTER_ATTRIBUTES,
+                {
+                    "operation-attributes-tag": {
+                        "requested-attributes": CAPABILITY_ATTRIBUTES,
+                    },
+                },
+            )
+
+            parsed = next(iter(response_data.get("printers", [{}])), {})
+
+            logger.info(f"打印机能力原始数据: {parsed}")
+            
             capabilities = {
                 "media": [],
                 "sides": [],
@@ -515,46 +539,67 @@ async def get_printer_capabilities(token: str) -> dict:
                 "printer_name": ""
             }
 
-            # 获取支持的 media (纸张尺寸)
-            if hasattr(printer, 'media_supported') and printer.media_supported:
-                capabilities["media"] = list(printer.media_supported)
+            # 从解析结果中获取属性
+            # media-supported
+            if "media-supported" in parsed:
+                capabilities["media"] = list(parsed["media-supported"])
             else:
                 capabilities["media"] = default_capabilities["media"]
 
-            # 获取支持的 sides (单双面)
-            if hasattr(printer, 'sides_supported') and printer.sides_supported:
-                capabilities["sides"] = list(printer.sides_supported)
+            # sides-supported
+            if "sides-supported" in parsed:
+                capabilities["sides"] = list(parsed["sides-supported"])
             else:
                 capabilities["sides"] = default_capabilities["sides"]
 
-            # 获取支持的 print-color-mode (色彩模式)
-            if hasattr(printer, 'color_modes_supported') and printer.color_modes_supported:
-                capabilities["color_mode"] = list(printer.color_modes_supported)
+            # color-supported (可能是 boolean)
+            if "color-supported" in parsed:
+                color_val = parsed["color-supported"]
+                if isinstance(color_val, bool):
+                    capabilities["color_mode"] = ["monochrome", "color"] if color_val else ["monochrome"]
+                else:
+                    capabilities["color_mode"] = list(color_val)
             else:
                 capabilities["color_mode"] = default_capabilities["color_mode"]
 
-            # 获取支持的 print-quality (打印质量)
-            if hasattr(printer, 'print_quality_supported') and printer.print_quality_supported:
-                capabilities["print_quality"] = list(printer.print_quality_supported)
+            # print-quality-supported
+            if "print-quality-supported" in parsed:
+                quality_val = parsed["print-quality-supported"]
+                # 处理枚举类型或列表
+                if hasattr(quality_val, '__iter__') and not isinstance(quality_val, str):
+                    # 是枚举列表，使用 .name 获取名称
+                    capabilities["print_quality"] = [q.name.lower() if hasattr(q, 'name') else str(q) for q in quality_val]
+                else:
+                    # 单个枚举值，使用 .name 获取名称
+                    if hasattr(quality_val, 'name'):
+                        capabilities["print_quality"] = [quality_val.name.lower()]
+                    else:
+                        capabilities["print_quality"] = [str(quality_val)]
             else:
                 capabilities["print_quality"] = default_capabilities["print_quality"]
 
-            # 获取支持的 document-format (文档格式)
-            if hasattr(printer, 'document_formats_supported') and printer.document_formats_supported:
-                capabilities["document_formats"] = list(printer.document_formats_supported)
+            # document-format-supported
+            if "document-format-supported" in parsed:
+                capabilities["document_formats"] = list(parsed["document-format-supported"])
             else:
-                # 默认支持 PDF 和常见图片格式
-                capabilities["document_formats"] = ["application/pdf", "image/jpeg", "image/png"]
+                capabilities["document_formats"] = default_capabilities["document_formats"]
 
-            # 获取支持的 printer-resolution (打印分辨率)
-            if hasattr(printer, 'printer_resolution_supported') and printer.printer_resolution_supported:
-                capabilities["printer_resolution"] = list(printer.printer_resolution_supported)
+            # printer-resolution-supported
+            if "printer-resolution-supported" in parsed:
+                # 转换为字符串列表
+                res_list = []
+                for res in parsed["printer-resolution-supported"]:
+                    if hasattr(res, '__str__'):
+                        res_list.append(str(res))
+                    else:
+                        res_list.append(res)
+                capabilities["printer_resolution"] = res_list
             else:
-                capabilities["printer_resolution"] = []
+                capabilities["printer_resolution"] = default_capabilities["printer_resolution"]
 
-            # 获取打印机名称
-            if hasattr(printer, 'printer_name') and printer.printer_name:
-                capabilities["printer_name"] = printer.printer_name
+            # printer-name
+            if "printer-name" in parsed:
+                capabilities["printer_name"] = parsed["printer-name"]
             else:
                 capabilities["printer_name"] = config.PRINTER_NAME or "Unknown Printer"
 
