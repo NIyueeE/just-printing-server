@@ -26,14 +26,11 @@ from fastapi import FastAPI
 from .config import config
 from .services import cleanup_sessions
 from .routes import create_routes
+from .logging_config import setup_logging, get_logger
 
 # 配置日志
-import logging
-logging.basicConfig(
-    level=config.LOG_LEVEL,
-    format="[%(asctime)s] [%(levelname)s] %(message)s"
-)
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 # 后台任务：每5分钟清理一次过期会话

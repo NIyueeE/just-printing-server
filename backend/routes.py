@@ -34,16 +34,10 @@ from .services import (
     get_printer_status,
     get_printer_capabilities,
     build_ipp_print_request,
-    get_session,
 )
+from .logging_config import get_logger
 
-# 配置日志
-import logging
-logging.basicConfig(
-    level=config.LOG_LEVEL,
-    format="[%(asctime)s] [%(levelname)s] %(message)s"
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # 限流器配置
