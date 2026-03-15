@@ -5,11 +5,12 @@
 """
 
 import asyncio
-import struct
 from typing import Dict, Any
 
 from pyipp import IPP
-from pyipp.enums import IppOperation
+from pyipp.enums import IppOperation, IppOrientationRequested, IppPrintQuality
+from pyipp.serializer import encode_dict
+from pyipp.const import DEFAULT_PROTO_VERSION
 
 from ..config import config
 from ..logging_config import get_logger
@@ -17,9 +18,9 @@ from ..logging_config import get_logger
 logger = get_logger(__name__)
 
 
-# 默认能力列表（打印机不支持时使用）
+# 默认能力列表（打印机不支持时使用）- 使用 IPP 标准名称
 DEFAULT_CAPABILITIES = {
-    "media": ["iso-a4"],
+    "media": ["iso_a4_210x297mm"],
     "sides": ["one-sided"],
     "color_mode": ["monochrome"],
     "print_quality": ["normal"],
@@ -36,12 +37,12 @@ def build_ipp_print_request(
     copies: int,
     sides: str,
     color_mode: str,
-    media: str = "iso-a4",
+    media: str = "iso_a4_210x297mm",
     print_quality: str = "normal",
     orientation: str = "portrait"
 ) -> bytes:
     """
-    手动构建标准的 IPP Print-Job 协议二进制 Payload
+    使用 pyipp 库构建 IPP Print-Job 协议二进制 Payload
 
     参数:
         printer_uri: 打印机 URI
@@ -49,105 +50,52 @@ def build_ipp_print_request(
         copies: 打印份数
         sides: 单双面设置 (one-sided, two-sided-long-edge, two-sided-short-edge)
         color_mode: 色彩模式 (monochrome, color)
-        media: 纸张尺寸 (iso-a4, iso-a3, letter, etc.)
+        media: 纸张尺寸 (使用打印机支持的格式，如 iso_a4_210x297mm)
         print_quality: 打印质量 (draft, normal, high)
         orientation: 打印方向 (portrait, landscape)
+
+    返回:
+        编码后的 IPP 请求字节数据
     """
-
-    # IPP 协议常量定义
-    # 参考: RFC 8010 (IPP/1.1) 和 RFC 8011 (IPP Model)
-
-    # IPP 版本和操作码
-    IPP_VERSION_1_1 = 0x0101          # IPP/1.1
-    IPP_OP_PRINT_JOB = 0x0002         # Print-Job 操作
-    IPP_REQUEST_ID = 1                 # 请求 ID
-
-    # IPP 属性组标签 (Group Tags)
-    IPP_GROUP_OPERATION = 0x01         # Operation Attributes Group
-    IPP_GROUP_JOB = 0x02               # Job Attributes Group
-    IPP_GROUP_END = 0x03               # End of Attributes Group
-
-    # IPP 属性类型标签 (Value Tags) - out-of-band 和文本类型
-    IPP_TAG_CHARSET = 0x47             # attribute-charset (charset)
-    IPP_TAG_NATURAL_LANG = 0x48        # attributes-natural-language (naturalLanguage)
-    IPP_TAG_URI = 0x45                 # printer-uri (uri)
-    IPP_TAG_NAME = 0x42                # requesting-user-name (name)
-    IPP_TAG_KEYWORD = 0x44             # sides, print-color-mode (keyword)
-    IPP_TAG_MIME_TYPE = 0x49           # document-format (mimeMediaType)
-    IPP_TAG_INTEGER = 0x21             # copies (integer)
-
-    # 构建 IPP 请求
-    # IPP/1.1 (0x0101), Operation: Print-Job (0x0002), Request ID: 1 (0x00000001)
-    req = bytearray(b'\x01\x01\x00\x02\x00\x00\x00\x01')
-
-    # 1. Operation Attributes Group (0x01)
-    req.append(IPP_GROUP_OPERATION)
-
-    # attributes-charset = utf-8
-    req.extend(b'\x47\x00\x12attributes-charset\x00\x05utf-8')
-    # attributes-natural-language = en-us
-    req.extend(b'\x48\x00\x1battributes-natural-language\x00\x05en-us')
-
-    # printer-uri
-    req.extend(b'\x45\x00\x0bprinter-uri')
-    req.extend(struct.pack('>H', len(printer_uri)))
-    req.extend(printer_uri.encode('utf-8'))
-
-    # requesting-user-name = fastapi (使用配置中的用户名)
-    user_name = config.IPP_USER_NAME or "fastapi"
-    req.extend(b'\x42\x00\x14requesting-user-name')
-    req.extend(struct.pack('>H', len(user_name)))
-    req.extend(user_name.encode('utf-8'))
-
-    # document-format = application/pdf
-    req.extend(b'\x49\x00\x0fdocument-format\x00\x0fapplication/pdf')
-
-    # 2. Job Attributes Group (0x02)
-    req.append(IPP_GROUP_JOB)
-
-    # copies (integer)
-    req.extend(b'\x21\x00\x06copies\x00\x04')
-    req.extend(struct.pack('>I', copies))
-
-    # sides (keyword)
-    req.extend(b'\x44\x00\x05sides')
-    req.extend(struct.pack('>H', len(sides)))
-    req.extend(sides.encode('utf-8'))
-
-    # print-color-mode (keyword)
-    req.extend(b'\x44\x00\x10print-color-mode')
-    req.extend(struct.pack('>H', len(color_mode)))
-    req.extend(color_mode.encode('utf-8'))
-
-    # media (keyword) - 纸张尺寸
-    req.extend(b'\x44\x00\x05media')
-    req.extend(struct.pack('>H', len(media)))
-    req.extend(media.encode('utf-8'))
-
-    # print-quality (keyword) - 打印质量
-    req.extend(b'\x44\x00\x0dprint-quality')
-    req.extend(struct.pack('>H', len(print_quality)))
-    req.extend(print_quality.encode('utf-8'))
-
-    # orientation-requested (enum) - 打印方向
-    # 3 = portrait, 4 = landscape, 5 = reverse-landscape, 6 = reverse-portrait
+    # 方向枚举映射
     orientation_map = {
-        "portrait": 3,
-        "landscape": 4,
-        "reverse-landscape": 5,
-        "reverse-portrait": 6
+        "portrait": IppOrientationRequested.PORTRAIT,
+        "landscape": IppOrientationRequested.LANDSCAPE,
+        "reverse-landscape": IppOrientationRequested.REVERSE_LANDSCAPE,
+        "reverse-portrait": IppOrientationRequested.REVERSE_PORTRAIT
     }
-    orientation_value = orientation_map.get(orientation, 3)
-    req.extend(b'\x22\x00\x15orientation-requested\x00\x04')
-    req.extend(struct.pack('>I', orientation_value))
 
-    # 3. End of Attributes (0x03)
-    req.append(IPP_GROUP_END)
+    # 打印质量枚举映射
+    quality_map = {
+        "draft": IppPrintQuality.DRAFT,
+        "normal": IppPrintQuality.NORMAL,
+        "high": IppPrintQuality.HIGH
+    }
 
-    # 4. Document Content (追加真实的 PDF 二进制数据)
-    req.extend(pdf_bytes)
+    # 构建 IPP 请求字典
+    request = {
+        "version": DEFAULT_PROTO_VERSION,
+        "operation": IppOperation.PRINT_JOB,
+        "operation-attributes-tag": {
+            "attributes-charset": "utf-8",
+            "attributes-natural-language": "en-us",
+            "printer-uri": printer_uri,
+            "requesting-user-name": config.IPP_USER_NAME or "fastapi",
+            "document-format": "application/pdf",
+        },
+        "job-attributes-tag": {
+            "copies": copies,
+            "sides": sides,
+            "print-color-mode": color_mode,
+            "media": media,
+            "print-quality": quality_map.get(print_quality, IppPrintQuality.NORMAL),
+            "orientation-requested": orientation_map.get(orientation, IppOrientationRequested.PORTRAIT),
+        },
+        "data": pdf_bytes,
+    }
 
-    return bytes(req)
+    # 使用 pyipp 的序列化器
+    return encode_dict(request)
 
 
 async def get_printer_status(token: str) -> Dict[str, Any]:

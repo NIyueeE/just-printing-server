@@ -18,7 +18,7 @@ class Config:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
     # IPP 打印配置
-    IPP_DEFAULT_MEDIA = os.getenv("IPP_DEFAULT_MEDIA", "iso-a4")
+    IPP_DEFAULT_MEDIA = os.getenv("IPP_DEFAULT_MEDIA", "iso_a4_210x297mm")
     IPP_DEFAULT_QUALITY = os.getenv("IPP_DEFAULT_QUALITY", "normal")
     IPP_DEFAULT_ORIENTATION = os.getenv("IPP_DEFAULT_ORIENTATION", "portrait")
     IPP_USER_NAME = os.getenv("IPP_USER_NAME", "fastapi")
